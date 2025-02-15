@@ -1,0 +1,50 @@
+<div pFocusTrap class="grid md:grid-cols-2 gap-4" [formGroup]="resultForm">
+  <div class="w-full flex items-center justify-center">
+    <p-selectbutton
+      [options]="keyOptions"
+      [allowEmpty]="false"
+      formControlName="key"
+      optionLabel="label"
+      optionValue="value"
+    />
+  </div>
+
+  <p-floatlabel variant="in" class="w-full">
+    <input id="value" formControlName="value" pInputText class="w-full" />
+    <label for="value">Value</label>
+  </p-floatlabel>
+
+  <p-floatlabel variant="in" class="col-span-full">
+    <textarea
+      pTextarea
+      id="comment"
+      formControlName="comment"
+      rows="4"
+      autoResize
+      class="w-full"
+    ></textarea>
+    <label for="comment">Comment</label>
+  </p-floatlabel>
+</div>
+
+<div class="mt-4 flex justify-between items-center">
+  <div>
+    @if (isUpdate) {
+      <p-button
+        (click)="deleteResult()"
+        label="Delete"
+        icon="pi pi-trash"
+        severity="danger"
+        text
+      />
+    }
+  </div>
+
+  <div>
+    <p-button
+      (click)="closeDialog()"
+      [disabled]="!resultForm.dirty || !resultForm.valid"
+      >{{ isUpdate ? "Update" : "Create" }}</p-button
+    >
+  </div>
+</div>

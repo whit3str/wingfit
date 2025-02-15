@@ -1,0 +1,107 @@
+@import "primeicons/primeicons.css";
+
+@layer tailwind-base, primeng, tailwind-utilities;
+
+@layer tailwind-base {
+  @tailwind base;
+}
+
+@layer tailwind-utilities {
+  @tailwind components;
+  @tailwind utilities;
+}
+
+* {
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+  overscroll-behavior: none;
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 20px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #fff;
+    border-radius: 20px;
+  }
+}
+
+html {
+  font-size: 15px;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol";
+  line-height: normal;
+}
+
+@keyframes slideY {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+.slideY {
+  animation: slideY 0.3s both;
+}
+
+.bloc-is {
+  padding: 0.4rem 0;
+
+  &-active {
+    border-bottom: 2px solid #382d2d;
+    font-weight: 600;
+  }
+}
+
+.fixed-toolbar-on-scroll {
+  z-index: 500;
+  position: sticky;
+  top: 0px;
+}
+
+.calendar-hover-week .p-datepicker-calendar {
+  tr:has(.p-datepicker-day-selected) {
+    background: rgb(226 232 240) !important;
+  }
+  .p-datepicker-day-selected {
+    font-weight: bold;
+    color: initial !important;
+    background: rgb(226 232 240) !important;
+  }
+
+  .p-datepicker-today > .p-datepicker-day {
+    color: white !important;
+    background: rgb(163 163 163) !important;
+  }
+
+  tr:hover {
+    background-color: rgb(226 232 240) !important;
+  }
+}
+
+.material-symbols-outlined {
+  //Override material default large size
+  font-size: 1.4rem !important;
+}
+
+.custom-bloc-badge .p-badge {
+  top: 3px;
+  left: -4px;
+  z-index: -100;
+}

@@ -1,0 +1,54 @@
+<section class="md:px-8 mx-auto fixed-toolbar-on-scroll bg-slate-50">
+  <p-toolbar [style]="{ border: '0' }" [styleClass]="'bg-slate-50'">
+    <ng-template #start></ng-template>
+
+    <ng-template #center>
+      <p-iconfield iconPosition="left">
+        <p-inputicon styleClass="pi pi-search" />
+        <input
+          type="text"
+          pInputText
+          [formControl]="searchInput"
+          placeholder="Search"
+        />
+      </p-iconfield>
+    </ng-template>
+
+    <ng-template #end></ng-template>
+  </p-toolbar>
+</section>
+
+<section
+  class="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 px-2 md:px-8 pt-4 md:py-8 slideY"
+>
+  @defer {
+    @for (bloc of displayedBlocs; track bloc.id) {
+      <app-bloc
+        class="mb-4 inline-block w-full"
+        (click)="blocClicked(bloc)"
+        [bloc]="bloc"
+      ></app-bloc>
+    } @empty {
+      <section class="grid mt-8 w-full aspect-square">
+        <div class="py-8 px-4 mx-auto max-w-screen-xl sm:py-16 lg:px-6">
+          <div class="max-w-screen-md">
+            <div class="flex justify-center items-center">
+              <h2
+                class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900"
+              >
+                Nothing to see yet
+              </h2>
+            </div>
+            <p class="mt-4 font-light text-center text-gray-500 sm:text-xl">
+              Your blocs will be listed in this page
+            </p>
+          </div>
+        </div>
+      </section>
+    }
+  } @placeholder (minimum 0.4s) {
+    @for (_ of [1, 2, 3, 4]; track _) {
+      <div class="mb-2"><p-skeleton height="20rem" /></div>
+    }
+  }
+</section>

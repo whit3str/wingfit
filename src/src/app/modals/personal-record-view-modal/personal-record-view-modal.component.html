@@ -1,0 +1,103 @@
+<section>
+  <p-tabs value="summary">
+    <p-tablist>
+      <p-tab value="summary">Summary</p-tab>
+      <p-tab value="history" [disabled]="!pr.values.length">History</p-tab>
+    </p-tablist>
+    <p-tabpanels>
+      <p-tabpanel value="summary">
+        <div class="grid gap-2 md:grid-cols-3 py-2 md:p-6">
+          @if (pr.key != "time") {
+            <div class="col-span-full">
+              <h1 class="text-2xl font-bold text-center text-gray-900">
+                Highest value %
+              </h1>
+            </div>
+
+            @for (
+              percent of [0.98, 0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.1];
+              track $index
+            ) {
+              <p-card class="m-1">
+                <div class="flex flex-col content-center items-center">
+                  <span class="font-light text-gray-500 select-none"
+                    >{{ percent * 100 }}%</span
+                  >
+                  @if (score_best && pr.key != "time") {
+                    <span class="text-lg font-medium"
+                      >{{ +score_best * percent | number: "1.0-1" }}
+                      {{ pr.key }}</span
+                    >
+                  } @else {
+                    <span class="text-lg font-medium">N/A</span>
+                  }
+                </div>
+              </p-card>
+            }
+          } @else {
+            <section class="flex justify-center col-span-full">
+              <div class="py-8 px-4 mx-auto max-w-screen-xl sm:py-16 lg:px-6">
+                <div class="max-w-screen-md">
+                  <div class="flex justify-center items-center">
+                    <h2
+                      class="mb-0 text-3xl tracking-tight font-extrabold text-gray-900"
+                    >
+                      Time Record
+                    </h2>
+                  </div>
+                  <p
+                    class="mt-4 font-light text-center text-gray-500 sm:text-xl"
+                  >
+                    Percentages not available
+                  </p>
+                </div>
+              </div>
+            </section>
+          }
+        </div>
+
+        <div class="flex justify-center items-center w-lg gap-4">
+          <p-button label="Add value" (click)="addValue()" text />
+          <p-button
+            label="Delete"
+            (click)="deleteRecord()"
+            severity="danger"
+            text
+          />
+        </div>
+      </p-tabpanel>
+
+      <p-tabpanel value="history">
+        <div class="max-h-96 mt-4 max-w-xl w-full grid gap-4 mx-auto">
+          @for (value of sortedDescendingValues; track $index) {
+            <div
+              class="group hover:bg-slate-100 rounded-lg p-4 relative cursor-pointer"
+              (click)="toggleRecordValueMenu(value, $event)"
+            >
+              <div class="flex flex-col">
+                <span class="text-gray-400 text-sm">{{ value.cdate }}</span>
+                <div>
+                  <span class="text-3xl font-bold">{{ value.value }}</span>
+                  @if (pr.key != "time") {
+                    <span class="ml-0.5">{{ pr.key }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- HACK: Due to max-h-96, can't put margin to give gap at the bottom -->
+            @if ($last) {
+              <div class="mt-2 select-none">&nbsp;</div>
+            }
+          }
+        </div>
+        <p-menu
+          appendTo="body"
+          #recordValueMenu
+          [model]="recordValueMenuItems"
+          [popup]="true"
+        />
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+</section>

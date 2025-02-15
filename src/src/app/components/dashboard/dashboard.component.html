@@ -1,0 +1,242 @@
+<section class="md:px-8 mx-auto fixed-toolbar-on-scroll bg-slate-50">
+  <p-toolbar [style]="{ border: '0' }" [styleClass]="'bg-slate-50'">
+    <ng-template #start>
+      <p-button
+        class="hidden md:block mr-2"
+        text
+        severity="primary"
+        (click)="resetDateToToday()"
+        [disabled]="dateToStr(selectedDate) == dateToStr(todayDate)"
+        >Today</p-button
+      >
+
+      <!-- Screen -->
+      <div class="hidden md:block">
+        <p-button
+          icon="pi pi-angle-left"
+          (click)="prevWeek()"
+          class="mr-2"
+          text
+          severity="secondary"
+        />
+        <p-button
+          icon="pi pi-angle-right"
+          (click)="nextWeek()"
+          text
+          severity="secondary"
+        />
+      </div>
+
+      <!-- Mobile -->
+      <div class="block md:hidden">
+        <p-button
+          icon="pi pi-angle-left"
+          (click)="prevDay()"
+          class="mr-2"
+          text
+          severity="secondary"
+        />
+        <p-button
+          icon="pi pi-angle-right"
+          (click)="nextDay()"
+          text
+          severity="secondary"
+        />
+      </div>
+    </ng-template>
+
+    <ng-template #center>
+      <span class="text-md cursor-pointer" (click)="datepickerOpen()"
+        >{{ selectedDate_firstDayOfWeek | date: "dd MMM" }} -
+        {{ selectedDate_lastDayOfWeek | date: "dd MMM" }}</span
+      >
+    </ng-template>
+
+    <ng-template #end>
+      <p-button
+        icon="pi pi-plus"
+        (click)="createBloc()"
+        text
+        severity="secondary"
+      />
+      <p-button
+        icon="pi pi-ellipsis-h"
+        text
+        severity="secondary"
+        (click)="toolbarMenu.toggle($event)"
+      />
+      <p-menu
+        appendTo="body"
+        #toolbarMenu
+        [model]="toolbarMenuItems"
+        [popup]="true"
+      />
+    </ng-template>
+  </p-toolbar>
+</section>
+
+<section class="mt-6 mb-4">
+  <div class="flex flex-row">
+    @for (day of datesOfWeek_array; track day) {
+      <div class="flex-1 select-none px-2 md:px-4">
+        <div
+          class="flex flex-col justify-center items-center w-full"
+          (click)="dayClicked(day)"
+        >
+          @defer {
+            <span class="font-light text-sm">
+              {{ day | date: "MM/dd" }}
+            </span>
+
+            <div
+              class="hidden md:block bloc-is"
+              [class.bloc-is-active]="day.getTime() == todayDate.getTime()"
+            >
+              {{ weekDays[$index] }}
+              @if (displayedBlocsDuration[dateToStr(day)]) {
+                <span class="text-sm"
+                  >(total:
+                  {{
+                    displayedBlocsDuration[dateToStr(day)] | minsToHour
+                  }})</span
+                >
+              }
+            </div>
+            <div
+              class="block md:hidden bloc-is cursor-pointer"
+              [class.bloc-is-active]="day.getTime() == selectedDate.getTime()"
+            >
+              <p-overlaybadge
+                [value]="displayedBlocs[dateToStr(day)]?.length"
+                severity="secondary"
+                class="custom-bloc-badge"
+              >
+                {{ weekDays[$index][0] }}
+              </p-overlaybadge>
+            </div>
+          } @placeholder (minimum 0.35s) {
+            <p-skeleton class="w-full max-w-32" height="1rem" />
+            <p-skeleton class="w-full max-w-20 mt-2" height="1.25rem" />
+          }
+        </div>
+
+        <div class="mt-4 hidden md:block">
+          @defer {
+            @for (bloc of displayedBlocs[dateToStr(day)]; track bloc.id) {
+              <div class="slideY">
+                <app-bloc
+                  [selected]="selectedBlocsID.includes(bloc.id)"
+                  [bloc]="bloc"
+                  (clickEmitter)="blocClicked($event, bloc)"
+                ></app-bloc>
+              </div>
+            }
+          } @placeholder (minimum 0.35s) {
+            <div class="slideY">
+              <p-skeleton height="10rem" />
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="my-4 block md:hidden px-4">
+    @defer {
+      @for (bloc of displayedBlocs[dateToStr(selectedDate)]; track bloc.id) {
+        <div class="slideY">
+          <app-bloc
+            [selected]="selectedBlocsID.includes(bloc.id)"
+            [bloc]="bloc"
+            (clickEmitter)="blocClicked($event, bloc)"
+          ></app-bloc>
+        </div>
+      } @empty {
+        <section class="flex justify-center mt-8 col-span-full">
+          <div class="py-8 px-4 mx-auto max-w-screen-xl sm:py-16 lg:px-6">
+            <div class="max-w-screen-md">
+              <div class="flex justify-center items-center">
+                <h2
+                  class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900"
+                >
+                  Nothing this day
+                </h2>
+              </div>
+              <p class="mt-4 font-light text-center text-gray-500 sm:text-xl">
+                Add blocs on {{ selectedDate | date: "dd MMM" }} to see them
+                here
+              </p>
+            </div>
+          </div>
+        </section>
+      }
+    } @placeholder (minimum 0.35s) {
+      <div class="slideY">
+        @for (_ of [1, 2, 3]; track _) {
+          <div class="mt-2">
+            <p-skeleton height="6rem" />
+          </div>
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<p-popover #op>
+  <div class="grid">
+    @for (action of blocClickActions; track action.action) {
+      <p-button
+        [label]="action.text"
+        [icon]="action.icon"
+        (click)="handleBlocAction(action.action)"
+        text
+        severity="secondary"
+      />
+    }
+  </div>
+</p-popover>
+
+@if (selectionMode) {
+  <div
+    class="p-4 pb-6 bg-slate-50 rounded-t-lg fixed bottom-0 left-1/2 flex flex-col items-center transform -translate-x-1/2 gap-1"
+  >
+    <div class="text-sm font-light tracking-wide">
+      {{ selectedBlocs.length }} selected
+    </div>
+
+    <div class="flex gap-2 md:gap-4">
+      <p-button
+        icon="pi pi-times"
+        (click)="disableSelectionMode()"
+        label="Cancel"
+        text
+        size="large"
+        severity="info"
+      />
+      <p-button
+        icon="pi pi-copy"
+        (click)="selectionModeCopy()"
+        label="Copy"
+        text
+        size="large"
+        severity="primary"
+      />
+      <p-button
+        icon="pi pi-file-export"
+        (click)="selectionModeMove()"
+        label="Move"
+        text
+        size="large"
+        severity="primary"
+      />
+      <p-button
+        icon="pi pi-trash"
+        (click)="selectionModeDelete()"
+        label="Delete"
+        text
+        size="large"
+        severity="danger"
+      />
+    </div>
+  </div>
+}

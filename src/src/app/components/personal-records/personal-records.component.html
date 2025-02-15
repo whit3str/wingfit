@@ -1,0 +1,94 @@
+<section class="md:px-8 mx-auto fixed-toolbar-on-scroll bg-slate-50">
+  <p-toolbar [style]="{ border: '0' }" [styleClass]="'bg-slate-50'">
+    <ng-template #start></ng-template>
+
+    <ng-template #center>
+      <p-iconfield iconPosition="left">
+        <p-inputicon styleClass="pi pi-search" />
+        <input
+          type="text"
+          pInputText
+          [formControl]="searchInput"
+          placeholder="Search"
+        />
+      </p-iconfield>
+    </ng-template>
+
+    <ng-template #end>
+      <p-button
+        icon="pi pi-plus"
+        text
+        severity="secondary"
+        (click)="createPR()"
+      />
+    </ng-template>
+  </p-toolbar>
+</section>
+
+<div
+  class="grid gap-4 lg:gap-8 md:grid-cols-4 lg:grid-cols-6 px-4 md:px-8 my-4 md:my-8"
+>
+  @defer {
+    @for (record of displayedRecords; track record.id) {
+      <p-card (click)="viewPR(record)" class="cursor-pointer">
+        <div class="flex justify-between items-start mt-3">
+          <div class="flex flex-col w-1/2">
+            <span class="text-lg">{{ record.name }}</span>
+            <div>
+              <span class="text-5xl font-bold">{{
+                record.latest_value?.value?.substring(0, 5) || "N/A"
+              }}</span>
+              <span class="ml-0.5">
+                @if (record.key != "time") {
+                  {{ record.key }}
+                } @else {
+                  {{
+                    record.latest_value?.value?.split(":")?.length === 3
+                      ? "h"
+                      : ""
+                  }}
+                }
+              </span>
+            </div>
+            <span class="text-gray-400 text-xs">{{
+              (record.latest_value?.cdate | date: "dd/MM/YYYY") || "N/A"
+            }}</span>
+          </div>
+
+          <div class="w-1/2 max-w-1/2">
+            @if ((record.values || []).length > 1) {
+              <p-chart
+                type="line"
+                [data]="record.graph"
+                [options]="graphOptions"
+              />
+            } @else {
+              <span>Not enough data</span>
+            }
+          </div>
+        </div>
+      </p-card>
+    } @empty {
+      <section class="flex justify-center mt-8 col-span-full">
+        <div class="py-8 px-4 mx-auto max-w-screen-xl sm:py-16 lg:px-6">
+          <div class="max-w-screen-md">
+            <div class="flex justify-center items-center">
+              <h2
+                class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900"
+              >
+                Nothing to see yet
+              </h2>
+            </div>
+            <p class="mt-4 font-light text-center text-gray-500 sm:text-xl">
+              Create your PR and add your history
+            </p>
+          </div>
+        </div>
+      </section>
+    }
+  } @placeholder (minimum 0.4s) {
+    @for (_ of [1, 2, 3, 4]; track $index) {
+      <p-skeleton height="8rem" />
+    }
+  }
+</div>

@@ -1,0 +1,43 @@
+<section>
+  <p-card class="select-none cursor-pointer">
+    <ng-template #header>
+      <div
+        class="flex items-center px-3 py-2 rounded-t-lg"
+        [style.background-color]="categoryForm.get('color')?.value || '#333'"
+      >
+        <div class="flex flex-grow items-center justify-between">
+          <span class="px-1 uppercase text-white font-semibold">{{
+            categoryForm.get("name")?.value || "No name"
+          }}</span>
+        </div>
+      </div>
+    </ng-template>
+    &nbsp;
+  </p-card>
+
+  <div pFocusTrap class="mt-4 flex flex-col gap-4" [formGroup]="categoryForm">
+    <p-floatlabel variant="in" class="w-full">
+      <input id="name" formControlName="name" pInputText class="w-full" />
+      <label for="name">Name</label>
+    </p-floatlabel>
+
+    <div class="flex items-center gap-4">
+      <p-colorpicker formControlName="color" appendTo="body" />
+
+      <p-floatlabel variant="in" class="w-full">
+        <input id="weight" formControlName="weight" pInputText class="w-full" />
+        <label for="weight">Weight</label>
+      </p-floatlabel>
+    </div>
+  </div>
+
+  <div class="mt-4 text-right">
+    <p-button
+      (click)="closeDialog()"
+      [disabled]="!categoryForm.dirty || !categoryForm.valid"
+      >{{
+        categoryForm.get("id")?.value !== -1 ? "Update" : "Create"
+      }}</p-button
+    >
+  </div>
+</section>

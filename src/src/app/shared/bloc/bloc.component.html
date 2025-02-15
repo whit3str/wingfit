@@ -1,0 +1,74 @@
+<div class="mt-2 cursor-pointer">
+  <p-card
+    (click)="emit($event)"
+    [style.height]="wrapEllipsis ? '250px;' : ''"
+  >
+    @if (selected) {
+      <div
+        class="opacity-15 bg-black rounded-lg absolute inset-0 flex justify-center items-center"
+      >
+        <i class="opacity-100 pi pi-check-square text-3xl text-white mt-10"></i>
+      </div>
+    }
+
+    <ng-template #header>
+      <div
+        class="flex items-center px-3 py-2 rounded-t-lg"
+        [style.background-color]="bloc.category.color || ''"
+      >
+        <div class="flex flex-grow items-center justify-between">
+          <div class="flex items-center">
+            @if (bloc.result) {
+              <i class="pi pi-crown text-slate-100 text-sm mt-0.5"></i>
+            }
+            <span class="px-1 uppercase text-white font-semibold">{{
+              bloc.category.name || ""
+            }}</span>
+          </div>
+
+          <div>
+            @if (bloc.duration) {
+              <span class="text-slate-100">{{ bloc.duration + "m" }}</span>
+            }
+
+            @if (bloc.duration && bloc.next_in) {
+              <span style="margin: 0px 5px" class="text-slate-100">-</span>
+            }
+
+            @if (bloc.next_in) {
+              <span class="text-slate-100">Next in {{ bloc.next_in }}d</span>
+            }
+          </div>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-container>
+      <div
+        class="whitespace-pre-wrap"
+        [class]="wrapEllipsis ? 'line-clamp-10' : ''"
+      >{{ bloc.content }}
+        @if (wrapEllipsis && bloc.content.split("\n").length > 10) {
+          <div class="text-center">...</div>
+        }
+
+        @if (bloc.result) {
+          <div
+            class="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-lg p-4"
+            [style.background-color]="bloc.category.color"
+          >
+            <div class="text-white text-lg text-center font-semibold">
+              {{ bloc.result.value }}
+              {{ bloc.result.key != "time" ? bloc.result.key : "" }}
+            </div>
+            @if (bloc.result.comment) {
+              <div class="text-white text-sm text-center mt-1">
+                {{ bloc.result.comment }}
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </ng-container>
+  </p-card>
+</div>

@@ -1,0 +1,89 @@
+<section>
+  <div class="flex gap-x-4">
+    <div class="hidden md:flex md:w-2/5 overflow-y-auto p-4">
+      @if (programBlocForm.get("category")?.value) {
+        <app-bloc
+          class="w-full select-none"
+          [bloc]="programBlocForm.value"
+        ></app-bloc>
+      } @else {
+        <p-skeleton height="16rem" class="w-full"></p-skeleton>
+      }
+    </div>
+
+    <div
+      pFocusTrap
+      class="md:w-3/5 grid md:grid-cols-3 gap-4 mt-4"
+      [formGroup]="programBlocForm"
+    >
+      <p-floatlabel variant="in" class="w-full">
+        <p-select
+          [options]="(categories$ | async) || []"
+          optionLabel="name"
+          [loading]="!(categories$ | async)?.length"
+          inputId="category"
+          id="category"
+          formControlName="category"
+          [checkmark]="true"
+          class="w-full capitalize"
+        />
+        <label for="category">Category</label>
+      </p-floatlabel>
+
+      <p-floatlabel variant="in" class="w-full">
+        <input
+          id="duration"
+          formControlName="duration"
+          pInputText
+          class="w-full"
+        />
+        <label for="duration">Duration</label>
+      </p-floatlabel>
+
+      <p-floatlabel variant="in" class="w-full">
+        <input
+          id="next_in"
+          formControlName="next_in"
+          pInputText
+          class="w-full"
+        />
+        <label for="next_in">Next in</label>
+      </p-floatlabel>
+
+      <div class="mt-4 col-span-full w-full">
+        <div class="flex justify-center">
+          @for (emoji of emojiList; track $index) {
+            <span
+              (click)="addEmoji(contentElem, emoji)"
+              class="cursor-pointer ml-1"
+              >{{ emoji }}</span
+            >
+          }
+        </div>
+
+        <p-floatlabel variant="in" class="w-full mt-2">
+          <textarea
+            pTextarea
+            #contentElem
+            id="content"
+            formControlName="content"
+            rows="6"
+            autoResize
+            class="w-full"
+          ></textarea>
+          <label for="content">Content</label>
+        </p-floatlabel>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 text-right">
+    <p-button
+      (click)="closeDialog()"
+      [disabled]="!programBlocForm.dirty || !programBlocForm.valid"
+      >{{
+        programBlocForm.get("id")?.value !== -1 ? "Update" : "Create"
+      }}</p-button
+    >
+  </div>
+</section>

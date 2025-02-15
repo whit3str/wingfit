@@ -1,0 +1,182 @@
+<section class="pl-2 md:px-8 mx-auto fixed-toolbar-on-scroll bg-slate-50">
+  <p-toolbar [style]="{ border: '0' }" [styleClass]="'bg-slate-50'">
+    <ng-template #start
+      ><span class="font-bold text-lg">{{
+        program?.name || ""
+      }}</span></ng-template
+    >
+
+    <ng-template #end>
+      <div class="flex gap-4">
+        @if (editMode) {
+          <p-button
+            icon="pi pi-times"
+            (click)="disableEditMode()"
+            label="Exit edit"
+            text
+            severity="danger"
+          />
+        } @else {
+          <p-button
+            icon="pi pi-pencil"
+            (click)="enableEditMode()"
+            label="Edit mode"
+            severity="secondary"
+          />
+        }
+        <p-button
+          icon="pi pi-ellipsis-h"
+          label="More"
+          severity="secondary"
+          (click)="toolbarMenu.toggle($event)"
+        />
+        <p-menu
+          appendTo="body"
+          #toolbarMenu
+          [model]="toolbarMenuItems"
+          [popup]="true"
+        />
+      </div>
+    </ng-template>
+  </p-toolbar>
+</section>
+
+<section class="mt-4 slideY px-2 md:px-8 mx-auto mb-4">
+  @defer {
+    <p-accordion [multiple]="true">
+      @for (step of program?.steps; track step.id) {
+        <p-accordion-panel [value]="step.id" class="shadow-sm rounded-lg mt-2">
+          <p-accordion-header>
+            <ng-template #toggleicon let-active="active">
+              @if (active) {
+                <i class="pi pi-minus"></i>
+              } @else {
+                <i class="pi pi-plus"></i>
+              }
+            </ng-template>
+
+            <span class="flex items-center gap-2 w-full">
+              <span>{{ step.name }}</span>
+              <div class="ml-auto flex gap-4 mr-4">
+                <p-badge
+                  [value]="
+                    'repeat ' +
+                    (step.repeat || 0) +
+                    ' time' +
+                    (step.repeat > 1 ? 's' : '')
+                  "
+                  severity="secondary"
+                />
+                <p-badge
+                  [value]="(step.blocs.length || 0) + ' blocs'"
+                  severity="secondary"
+                />
+              </div>
+            </span>
+          </p-accordion-header>
+
+          <p-accordion-content>
+            <div class="flex grow justify-end gap-x-4">
+              @if (editMode) {
+                <p-button
+                  icon="pi pi-trash"
+                  label="Delete Step"
+                  text
+                  (click)="stepDelete(step)"
+                  severity="danger"
+                />
+                <p-button
+                  icon="pi pi-pencil"
+                  label="Edit Step"
+                  text
+                  (click)="stepEdit(step)"
+                  severity="info"
+                />
+                <p-button
+                  icon="pi pi-plus"
+                  label="Add Bloc"
+                  text
+                  (click)="stepAddBloc(step.id)"
+                  severity="primary"
+                />
+              } @else {
+                <p-button
+                  icon="pi pi-calendar"
+                  label="To planning"
+                  [disabled]="!step.blocs.length"
+                  text
+                  (click)="stepToCalendar(step)"
+                  severity="secondary"
+                />
+              }
+            </div>
+
+            <div class="grid md:grid-cols-4 gap-4">
+              @for (bloc of step.blocs; track bloc.id) {
+                <div>
+                  <app-bloc
+                    (click)="blocClicked(bloc)"
+                    [wrapEllipsis]="true"
+                    [bloc]="bloc"
+                  ></app-bloc>
+                  @if (editMode) {
+                    <div class="flex gap-4 justify-center mt-2">
+                      <p-button
+                        icon="pi pi-pencil"
+                        label="Edit"
+                        text
+                        (click)="stepEditBloc(step, bloc)"
+                        severity="info"
+                      />
+                      <p-button
+                        icon="pi pi-trash"
+                        label="Delete"
+                        text
+                        (click)="stepDeleteBloc(step, bloc.id)"
+                        severity="danger"
+                      />
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </p-accordion-content>
+        </p-accordion-panel>
+      } @empty {
+        <section class="flex justify-center mt-8">
+          <div class="py-8 px-4 mx-auto max-w-screen-xl sm:py-16 lg:px-6">
+            <div class="max-w-screen-md">
+              <div class="flex justify-center items-center">
+                <h2
+                  class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900"
+                >
+                  Nothing to see yet
+                </h2>
+              </div>
+              <p class="mt-4 font-light text-center text-gray-500 sm:text-xl">
+                Create your first Step and add your blocs
+              </p>
+            </div>
+          </div>
+        </section>
+      }
+    </p-accordion>
+  } @placeholder (minimum 0.4s) {
+    @for (_ of [1, 2, 3]; track $index) {
+      <div class="mt-2">
+        <p-skeleton height="4rem" />
+      </div>
+    }
+  }
+
+  @if (editMode) {
+    <div class="mt-4 text-center">
+      <p-button
+        icon="pi pi-plus"
+        label="Add Step"
+        (click)="stepAdd()"
+        severity="secondary"
+      />
+    </div>
+  }
+</section>

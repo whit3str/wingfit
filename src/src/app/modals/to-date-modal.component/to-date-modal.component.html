@@ -1,0 +1,28 @@
+<section>
+  @if (bloc) {
+    <div class="mb-4">
+      <app-bloc [bloc]="bloc" [wrapEllipsis]="true"></app-bloc>
+    </div>
+  }
+
+  <p-floatlabel variant="in" class="w-full max-w-lg">
+    <p-datepicker
+      id="date"
+      appendTo="body"
+      [formControl]="dateInput"
+      [iconDisplay]="'input'"
+      (keyup.enter)="validate()"
+      [showIcon]="true"
+    />
+    <label for="date">Date</label>
+  </p-floatlabel>
+
+  <div class="mt-4 text-center">
+    <p-button
+      label="Confirm"
+      icon="pi pi-check"
+      (click)="validate()"
+      [disabled]="!dateInput.value"
+    />
+  </div>
+</section>

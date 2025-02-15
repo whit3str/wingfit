@@ -1,0 +1,26 @@
+<section>
+  <div pFocusTrap class="grid grid-cols-2 gap-4 mt-4" [formGroup]="stepForm">
+    <p-floatlabel variant="in" class="w-full col-span-full">
+      <input id="name" formControlName="name" pInputText class="w-full" />
+      <label for="name">Name</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="in">
+      <input pInputText id="repeat" formControlName="repeat" class="w-full" />
+      <label for="repeat">Repeat</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="in">
+      <input pInputText id="next_in" formControlName="next_in" class="w-full" />
+      <label for="next_in">Next in</label>
+    </p-floatlabel>
+  </div>
+
+  <div class="mt-4 text-right">
+    <p-button
+      (click)="closeDialog()"
+      [disabled]="!stepForm.dirty || !stepForm.valid"
+      >{{ stepForm.get("id")?.value !== -1 ? "Update" : "Create" }}</p-button
+    >
+  </div>
+</section>

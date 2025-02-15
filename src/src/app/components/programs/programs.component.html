@@ -1,0 +1,107 @@
+<section class="md:px-8 mx-auto fixed-toolbar-on-scroll bg-slate-50">
+  <p-toolbar [style]="{ border: '0' }" [styleClass]="'bg-slate-50'">
+    <ng-template #start></ng-template>
+
+    <ng-template #center>
+      <p-iconfield iconPosition="left">
+        <p-inputicon styleClass="pi pi-search" />
+        <input
+          type="text"
+          pInputText
+          [formControl]="searchInput"
+          placeholder="Search"
+        />
+      </p-iconfield>
+    </ng-template>
+
+    <ng-template #end>
+      <p-button
+        icon="pi pi-upload"
+        (click)="fileUpload.click()"
+        pTooltip="Upload Program"
+        tooltipPosition="bottom"
+        text
+        severity="secondary"
+      />
+      <input
+        type="file"
+        class="file-input"
+        style="display: none"
+        (change)="onUploadFileSelected($event)"
+        #fileUpload
+      />
+      <p-button
+        icon="pi pi-plus"
+        (click)="createProgram()"
+        pTooltip="Add Program"
+        tooltipPosition="bottom"
+        text
+        severity="secondary"
+      />
+    </ng-template>
+  </p-toolbar>
+</section>
+
+<div class="px-2 md:px-8 my-4 grid md:grid-cols-6 gap-4">
+  @defer {
+    @for (program of programs; track program.id) {
+      <div [routerLink]="'/programs/' + program.id">
+        <div
+          class="flex flex-col w-full h-full rounded-md bg-white cursor-pointer shadow-md overflow-hidden my-0 mx-auto"
+        >
+          <div class="flex" style="height: 15rem">
+            <img
+              class="object-cover w-full"
+              [src]="program.image || '/cover.jpg'"
+            />
+          </div>
+
+          <div class="flex" style="padding: 0rem 2rem">
+            <div class="bg-white rounded-full p-1 !-mt-10">
+              <img
+                class="h-16 w-16 rounded-full object-cover"
+                src="/favicon_square.png"
+              />
+            </div>
+          </div>
+
+          <div class="flex flex-col px-8 pt-4 pb-6">
+            <div class="flex align-items-center justify-content-between">
+              <div class="mr-4">
+                <div class="text-2xl font-semibold leading-tight">
+                  {{ program.name }}
+                </div>
+                <div class="text-secondary line-clamp-1 leading-tight mt-1">
+                  {{ program.description || "No description." }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @empty {
+      <section class="flex justify-center mt-8 col-span-full">
+        <div class="py-8 px-4 mx-auto max-w-screen-xl sm:py-16 lg:px-6">
+          <div class="max-w-screen-md">
+            <div class="flex justify-center items-center">
+              <h2
+                class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900"
+              >
+                Nothing to see yet
+              </h2>
+            </div>
+            <p class="mt-4 font-light text-center text-gray-500 sm:text-xl">
+              Create your first Program
+            </p>
+          </div>
+        </div>
+      </section>
+    }
+  } @placeholder (minimum 0.4s) {
+    @for (_ of [1, 2, 3]; track $index) {
+      <div>
+        <p-skeleton height="12rem"></p-skeleton>
+      </div>
+    }
+  }
+</div>

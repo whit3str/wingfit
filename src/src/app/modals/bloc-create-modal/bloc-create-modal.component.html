@@ -1,0 +1,97 @@
+<section>
+  <div class="flex gap-x-4">
+    <div class="hidden md:flex md:w-2/5 overflow-y-auto p-4">
+      @if (blocForm.get("category")?.value) {
+        <app-bloc class="w-full select-none" [bloc]="blocForm.value"></app-bloc>
+      } @else {
+        <p-skeleton height="16rem" class="w-full"></p-skeleton>
+      }
+    </div>
+
+    <div
+      pFocusTrap
+      class="md:w-3/5 grid grid-cols-2 gap-4 mt-4"
+      [formGroup]="blocForm"
+    >
+      <p-floatlabel variant="in" class="w-full">
+        <p-select
+          [options]="(categories$ | async) || []"
+          optionLabel="name"
+          [loading]="!(categories$ | async)?.length"
+          inputId="category"
+          id="category"
+          formControlName="category"
+          [checkmark]="true"
+          class="w-full capitalize"
+        />
+        <label for="category">Category</label>
+      </p-floatlabel>
+
+      <p-floatlabel variant="in" class="w-full">
+        <p-datepicker
+          id="cdate"
+          [style]="{ width: '100%' }"
+          [iconDisplay]="'input'"
+          appendTo="body"
+          formControlName="cdate"
+          [showIcon]="true"
+        />
+        <label for="cdate">Date</label>
+      </p-floatlabel>
+
+      <p-floatlabel variant="in" class="w-full">
+        <input
+          id="duration"
+          formControlName="duration"
+          pInputText
+          class="w-full"
+        />
+        <label for="duration">Duration</label>
+      </p-floatlabel>
+
+      <p-floatlabel variant="in" class="w-full">
+        <p-select
+          [options]="[]"
+          id="program"
+          formControlName="program"
+          [checkmark]="true"
+          class="w-full"
+        />
+        <label for="program">Program</label>
+      </p-floatlabel>
+
+      <div class="mt-4 col-span-2 w-full">
+        <div class="flex justify-center">
+          @for (emoji of emojiList; track $index) {
+            <span
+              (click)="addEmoji(contentElem, emoji)"
+              class="cursor-pointer ml-1"
+              >{{ emoji }}</span
+            >
+          }
+        </div>
+
+        <p-floatlabel variant="in" class="mt-2">
+          <textarea
+            pTextarea
+            #contentElem
+            id="content"
+            formControlName="content"
+            rows="6"
+            autoResize
+            class="w-full"
+          ></textarea>
+          <label for="content">Content</label>
+        </p-floatlabel>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 text-right">
+    <p-button
+      (click)="closeDialog()"
+      [disabled]="!blocForm.dirty || !blocForm.valid"
+      >{{ blocForm.get("id")?.value !== -1 ? "Update" : "Create" }}</p-button
+    >
+  </div>
+</section>

@@ -1,0 +1,63 @@
+<section class="md:px-8 mx-auto fixed-toolbar-on-scroll bg-slate-50">
+  <p-toolbar [style]="{ border: '0' }" [styleClass]="'bg-slate-50'">
+    <ng-template #start></ng-template>
+    <ng-template #end>
+      <p-button
+        icon="pi pi-trash"
+        label="Remove all"
+        [disabled]="!blocs.length"
+        (click)="removeAllStash()"
+        text
+        severity="danger"
+      />
+      <p-button
+        icon="pi pi-info-circle"
+        label="iOS Shortcut"
+        (click)="showHelp()"
+        text
+        severity="help"
+      />
+    </ng-template>
+  </p-toolbar>
+</section>
+
+<div class="grid grid-cols-2 md:grid-cols-6 gap-4 px-2 md:px-8 mx-auto mt-4">
+  @defer {
+    @for (bloc of blocs; track bloc.id) {
+      <p-card class="select-none cursor-pointer" (click)="blocClicked(bloc)">
+        <ng-template #header>
+          <div class="flex items-center px-3 py-2 rounded-t-lg bg-slate-800">
+            <div class="flex flex-grow items-center justify-between">
+              <span class="px-1 uppercase text-white font-semibold"
+                >Uncategorized</span
+              >
+            </div>
+          </div>
+        </ng-template>
+
+        <span class="whitespace-pre-wrap">{{ bloc.content }}</span>
+      </p-card>
+    } @empty {
+      <section class="flex justify-center mt-8 col-span-full">
+        <div class="py-8 px-4 mx-auto max-w-screen-xl sm:py-16 lg:px-6">
+          <div class="max-w-screen-md">
+            <div class="flex justify-center items-center">
+              <h2
+                class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900"
+              >
+                Nothing to see yet
+              </h2>
+            </div>
+            <p class="mt-4 font-light text-center text-gray-500 sm:text-xl">
+              Stash is empty
+            </p>
+          </div>
+        </div>
+      </section>
+    }
+  } @placeholder (minimum 0.4s) {
+    @for (_ of [1, 2]; track _) {
+      <div class="mb-2"><p-skeleton height="16rem" /></div>
+    }
+  }
+</div>

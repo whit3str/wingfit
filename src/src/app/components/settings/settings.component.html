@@ -1,0 +1,208 @@
+<div class="max-w-7xl mx-auto px-4 md:px-0 m-4">
+  <p-card>
+    <div class="p-4">
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-900 mb-0">Categories</h1>
+        <p-button
+          label="Add Category"
+          icon="pi pi-plus"
+          (click)="addCategory()"
+          text
+          severity="secondary"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-4 py-2 mt-4">
+        @defer {
+          @for (category of categories$ | async; track category.id) {
+            <p-card
+              class="select-none cursor-pointer"
+              (click)="op.toggle($event); categoryInteracted = category"
+            >
+              <ng-template #header>
+                <div
+                  class="flex items-center px-3 py-2 rounded-t-lg"
+                  [style.background-color]="category?.color || ''"
+                >
+                  <div class="flex flex-grow items-center justify-between">
+                    <span class="px-1 uppercase text-white font-semibold">{{
+                      category?.name || ""
+                    }}</span>
+                  </div>
+                </div>
+              </ng-template>
+              &nbsp;
+            </p-card>
+          } @empty {
+            <div
+              style="
+                font-weight: 300;
+                margin: 1.5em 0em 1em 1em;
+                font-size: 1.05rem;
+              "
+              class="d-flex"
+            >
+              Add Category to see them here
+            </div>
+          }
+        } @placeholder (minimum 0.4s) {
+          @for (_ of [1, 2, 3]; track _) {
+            <p-skeleton height="6rem"></p-skeleton>
+          }
+        }
+      </div>
+    </div>
+  </p-card>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 md:px-0 m-4 grid md:grid-cols-2 gap-4">
+  <p-card>
+    <div class="p-4">
+      <h1 class="text-2xl font-bold text-gray-900">Third Party</h1>
+      <p class="mt-4 text-gray-600">
+        The Wingfit Token allows you to programmatically create Stash Bloc.
+        Soon<sup>TM</sup>, it will be possible to use the token to
+        programmatically interact with the server.
+      </p>
+
+      <div class="pt-4 text-center">
+        @defer {
+          @if (user?.api_token) {
+            <div class="flex gap-4 justify-center items-center">
+              <p-floatlabel variant="in">
+                <input
+                  id="token"
+                  formControlName="token"
+                  disabled
+                  value="***************"
+                  pInputText
+                />
+                <label for="token">Token</label>
+              </p-floatlabel>
+
+              <p-button
+                (click)="disableAccessToken()"
+                text
+                severity="danger"
+                label="Remove Token"
+              />
+            </div>
+          } @else {
+            <p-button
+              (click)="enableAccessToken()"
+              text
+              severity="success"
+              label="Generate Token"
+            />
+          }
+        } @placeholder (minimum 0.4s) {
+          <div class="flex justify-center">
+            <p-skeleton width="20rem" height="4rem"></p-skeleton>
+          </div>
+        }
+      </div>
+    </div>
+  </p-card>
+
+  <p-card [style]="{ height: '100%' }">
+    <div class="p-4">
+      <h1 class="text-2xl font-bold text-gray-900">Data</h1>
+      <p class="mt-4 text-gray-600">
+        You can create an export bundle to migrate or interact with your data
+      </p>
+
+      <div class="pt-4 text-center">
+        <p-button
+          (click)="exportData()"
+          icon="pi pi-database"
+          text
+          severity="info"
+          label="Export my data"
+        />
+      </div>
+    </div>
+  </p-card>
+</div>
+
+<section class="max-w-7xl mx-auto px-4 md:px-0 mb-4">
+  <div class="w-full flex flex-row-reverse md:h-[450px] relative">
+    <div
+      class="bg-white py-8 md:py-16 px-12 md:px-20 rounded-xl shadow md:shadow-md w-full md:w-2/3 z-10 md:absolute md:right-0 md:top-1/2 md:transform md:-translate-x-10 md:-translate-y-1/2"
+    >
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-900">About</h1>
+
+        <p-button (click)="toGithubWingfit()" text severity="primary"
+          ><div><i class="pi pi-github text-3xl"></i></div
+        ></p-button>
+      </div>
+
+      <div
+        class="flex flex-col md:flex-row justify-center md:justify-start items-center gap-4 mt-8 md:mt-4"
+      >
+        <a
+          href="https://ko-fi.com/itskovacs"
+          target="_blank"
+          class="custom-button flex items-center"
+          >Buy me a coffee</a
+        >
+        <span class="text-center text-gray-600"
+          >Coffee and contributions are greatly appreciated!</span
+        >
+      </div>
+
+      <div
+        class="flex flex-col md:flex-row justify-center md:justify-start items-center gap-4 mt-8 md:mt-4"
+      >
+        @if (this.info?.update) {
+          <button class="custom-button orange" (click)="toGithubWingfit()">
+            Open Github
+          </button>
+          <span class="text-center flex items-center gap-2 text-gray-400"
+            >Wingfit {{ this.info?.update }} available on Github</span
+          >
+        } @else {
+          <button class="custom-button" (click)="check_update()">
+            Check for updates
+          </button>
+          <span class="text-center flex items-center gap-2 text-gray-400"
+            >Wingfit
+            @defer {
+              {{ info?.version }}
+            } @placeholder (minimum 0.4s) {
+              <p-skeleton width="5rem" height="2rem"></p-skeleton>
+            }
+          </span>
+        }
+      </div>
+    </div>
+
+    <div class="hidden md:flex w-2/3 h-full absolute left-0 top-0">
+      <img
+        class="w-full h-full object-cover rounded-lg shadow"
+        src="about.jpg"
+      />
+    </div>
+  </div>
+</section>
+
+<div class="my-8 text-center">Made with ❤️ in BZH</div>
+
+<p-popover #op (onHide)="categoryInteracted = undefined">
+  <div class="grid">
+    <p-button
+      label="Edit"
+      icon="pi pi-pencil"
+      (click)="editCategory()"
+      text
+      severity="info"
+    />
+    <p-button
+      label="Delete"
+      icon="pi pi-trash"
+      (click)="deleteCategory()"
+      text
+      severity="danger"
+    />
+  </div>
+</p-popover>

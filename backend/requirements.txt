@@ -1,0 +1,8 @@
+fastapi[standard]
+sqlmodel
+pydantic
+PyJWT
+argon2-cffi
+pydantic_settings
+requests
+Pillow

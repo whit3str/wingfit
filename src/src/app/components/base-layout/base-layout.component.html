@@ -1,0 +1,91 @@
+<section class="w-full bg-slate-800 h-24">
+  <div
+    class="container px-8 flex flex-wrap items-center justify-between py-4 mx-auto"
+  >
+    <div class="relative flex items-center">
+      <img class="max-w-16" src="favicon_square.png" [routerLink]="'/'" />
+
+      <nav
+        class="hidden md:flex flex-wrap items-center mb-4 text-base md:mb-0 md:pl-8 md:ml-8 md:border-l md:border-gray-200"
+      >
+        @for (nav of navigationItems; track $index) {
+          <a
+            class="font-medium text-center text-gray-100 w-28 select-none"
+            [routerLink]="nav.routerLink"
+            routerLinkActive="bg-slate-100 font-semibold text-slate-800 rounded py-2 px-4"
+          >
+            {{ nav.text }}</a
+          >
+        }
+      </nav>
+    </div>
+
+    <div class="inline-flex items-center justify-end">
+      <button
+        (click)="toggleMobileMenu()"
+        class="block md:hidden mr-4 p-2 text-gray-100 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring focus:ring-gray-300"
+      >
+        <span class="pi pi-bars"></span>
+      </button>
+
+      <p-avatar
+        image="avatar.png"
+        size="large"
+        class="cursor-pointer"
+        (click)="userMenu.toggle($event)"
+        shape="circle"
+      />
+      <p-menu appendTo="body" #userMenu [model]="userMenuItems" [popup]="true">
+        <ng-template #item let-item>
+          <ng-container>
+            <div
+              class="p-2 pl-4 cursor-pointer"
+              [routerLink]="item.route"
+              (click)="(item.command)"
+            >
+              <a>
+                <span [class]="item.icon"></span>
+                <span class="ml-2">{{ item.label }}</span>
+              </a>
+            </div>
+          </ng-container>
+        </ng-template>
+      </p-menu>
+    </div>
+  </div>
+
+  @if (isMobileMenuOpen) {
+    <div class="md:hidden fixed inset-0 h-full bg-white" style="z-index: 9999">
+      <nav
+        class="flex flex-col p-8 space-y-2 bg-white border-t border-gray-200"
+      >
+        <div class="flex justify-between items-center mb-8">
+          <img class="max-w-16" src="favicon_square.png" />
+          <p-button
+            icon="pi pi-times"
+            size="large"
+            (click)="closeMobileMenu()"
+            text
+            severity="secondary"
+          />
+        </div>
+        @for (nav of navigationItems; track $index) {
+          <ng-container>
+            <a
+              class="font-semibold py-2 px-4 border-l-4 border-white text-gray-600"
+              [routerLink]="nav.routerLink"
+              routerLinkActive="!border-slate-800"
+              (click)="closeMobileMenu()"
+            >
+              {{ nav.text }}
+            </a>
+          </ng-container>
+        }
+      </nav>
+    </div>
+  }
+</section>
+
+<section [class.overflow-y-hidden]="isMobileMenuOpen">
+  <router-outlet></router-outlet>
+</section>

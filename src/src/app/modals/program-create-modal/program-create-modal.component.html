@@ -1,0 +1,89 @@
+<section>
+  <div pFocusTrap class="grid gap-4 mt-4" [formGroup]="programForm">
+    <p-floatlabel variant="in" class="w-full">
+      <input id="name" formControlName="name" pInputText class="w-full" />
+      <label for="name">Name</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="in">
+      <textarea
+        pTextarea
+        id="description"
+        formControlName="description"
+        rows="4"
+        autoResize
+        class="w-full"
+      ></textarea>
+      <label for="description">Description</label>
+    </p-floatlabel>
+
+    <div>
+      @if (programForm.get("image_id")?.value) {
+        <div class="relative group cursor-pointer" (click)="fileInput.click()">
+          <img
+            [src]="programForm.get('image')?.value"
+            class="w-full max-h-72 object-cover rounded-lg shadow-lg transition-transform duration-300"
+          />
+          <div
+            class="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex flex-col gap-4 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          >
+            <span class="text-md text-gray-200">Click to edit</span
+            ><i class="pi pi-upload text-white text-3xl"></i>
+          </div>
+        </div>
+        <input
+          type="file"
+          accept="image/*"
+          #fileInput
+          class="hidden"
+          (change)="onFileSelected($event)"
+        />
+      } @else {
+        @if (programForm.get("image")?.value) {
+          <div class="relative group cursor-pointer" (click)="clearImage()">
+            <img
+              [src]="programForm.get('image')?.value"
+              class="w-full max-h-72 object-cover rounded-lg shadow-lg transition-transform duration-300"
+            />
+            <div
+              class="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            >
+              <i class="pi pi-trash text-white text-3xl"></i>
+            </div>
+          </div>
+        } @else {
+          <div
+            class="relative group cursor-pointer"
+            (click)="fileInput.click()"
+          >
+            <img
+              src="/cover.jpg"
+              class="w-full max-h-72 object-cover rounded-lg shadow-lg transition-transform duration-300"
+            />
+            <div
+              class="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex flex-col gap-4 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            >
+              <span class="text-md text-gray-200">Click to edit</span
+              ><i class="pi pi-upload text-white text-3xl"></i>
+            </div>
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            #fileInput
+            class="hidden"
+            (change)="onFileSelected($event)"
+          />
+        }
+      }
+    </div>
+  </div>
+
+  <div class="mt-4 text-right">
+    <p-button
+      (click)="closeDialog()"
+      [disabled]="!programForm.dirty || !programForm.valid"
+      >{{ programForm.get("id")?.value !== -1 ? "Update" : "Create" }}</p-button
+    >
+  </div>
+</section>

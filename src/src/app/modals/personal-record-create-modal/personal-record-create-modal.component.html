@@ -1,0 +1,85 @@
+<section>
+  <div
+    pFocusTrap
+    class="flex flex-col gap-y-4 items-center justify-center mt-4"
+    [formGroup]="prForm"
+  >
+    <p-floatlabel variant="in" class="w-full max-w-lg">
+      <input
+        #name
+        pInputText
+        id="name"
+        formControlName="name"
+        class="w-full"
+        autofocus
+      />
+      <label for="name">Name</label>
+    </p-floatlabel>
+
+    <p-floatlabel variant="in" class="w-full max-w-lg">
+      <p-select
+        [options]="pr_keys"
+        id="key"
+        formControlName="key"
+        placeholder="PR Type"
+        [checkmark]="true"
+        class="w-full"
+      />
+      <label for="key">Key</label>
+    </p-floatlabel>
+
+    @if (values.length && prForm.get("key")?.value == "time") {
+      <div class="mt-2">
+        <p-message severity="info" class="text-center"
+          >Format for time record values is <i>[hh:]mm:ss</i>.<br />eg: 13:37,
+          4:51:40, 1:8:0</p-message
+        >
+      </div>
+    }
+    @if (values.hasError("duplicate")) {
+      <p-message severity="error">The dates must be unique</p-message>
+    }
+    <div formArrayName="values" class="w-full max-w-lg">
+      @for (valueGroup of values.controls; let i = $index; track valueGroup) {
+        <div [formGroupName]="i" class="flex items-center mt-2 gap-x-4">
+          <p-floatlabel variant="in" class="w-full max-w-lg">
+            <input
+              #value
+              pInputText
+              id="value"
+              formControlName="value"
+              class="w-full"
+              autofocus
+            />
+            <label for="value">Value</label>
+          </p-floatlabel>
+
+          <p-floatlabel variant="in" class="w-full max-w-lg">
+            <p-datepicker
+              id="cdate"
+              [iconDisplay]="'input'"
+              appendTo="body"
+              formControlName="cdate"
+              [showIcon]="true"
+            />
+            <label for="cdate">Date</label>
+          </p-floatlabel>
+
+          <p-button
+            icon="pi pi-times"
+            (click)="removeValue(i)"
+            text
+            severity="danger"
+          />
+        </div>
+      }
+    </div>
+    <p-button label="Add value" text (click)="addValue()" />
+  </div>
+
+  <div class="mt-4 text-right">
+    <p-button (click)="closeDialog()" [disabled]="!prForm.valid"
+      >Create</p-button
+    >
+  </div>
+</section>

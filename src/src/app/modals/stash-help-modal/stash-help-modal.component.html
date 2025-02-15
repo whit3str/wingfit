@@ -1,0 +1,218 @@
+<section>
+  <div class="flex justify-center">
+    <p-stepper [value]="1">
+      <p-step-list class="hidden md:flex">
+        <p-step [value]="1">Preparation</p-step>
+        <p-step [value]="2">Shortcut Tweak</p-step>
+        <p-step [value]="3">Select</p-step>
+        <p-step [value]="4">Share</p-step>
+        <p-step [value]="5">Create</p-step>
+      </p-step-list>
+      <p-step-panels>
+        <p-step-panel [value]="1">
+          <ng-template #content let-activateCallback="activateCallback">
+            <div class="max-w-96 md:max-w-xl mx-auto">
+              <div class="flex flex-col text-center gap-4">
+                <div class="p-4 pt-0">
+                  <h2
+                    class="mb-0 text-2xl tracking-tight font-bold text-gray-900"
+                  >
+                    Generate your Token
+                  </h2>
+                  <p class="mt-2 text-gray-600">
+                    You can generate your token in the
+                    <span
+                      class="text-blue-600 cursor-pointer"
+                      (click)="toSettings()"
+                      >settings</span
+                    >
+                  </p>
+                </div>
+
+                <div class="p-4 pt-0">
+                  <h2
+                    class="mb-0 text-2xl tracking-tight font-bold text-gray-900"
+                  >
+                    Retrieve the iOS Shortcut
+                  </h2>
+                  <p class="mt-2 text-gray-600">
+                    On your mobile, import the shortcut by clicking here:
+                    <a
+                      href="https://www.icloud.com/shortcuts/8901a8541a9947f783693d1bc3ee89dd"
+                      class="text-blue-600"
+                      target="_blank"
+                      >here (iCloud)</a
+                    >
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex pt-6 justify-end">
+                <p-button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  iconPos="right"
+                  (onClick)="activateCallback(2)"
+                />
+              </div>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <p-step-panel [value]="2">
+          <ng-template #content let-activateCallback="activateCallback">
+            <div class="max-w-96 md:max-w-xl mx-auto">
+              <div class="flex flex-col items-center text-center">
+                <div class="p-4 pt-0">
+                  <h2
+                    class="mb-0 text-2xl tracking-tight font-bold text-gray-900"
+                  >
+                    Modify the Shortcut
+                  </h2>
+                  <p class="mt-2 text-gray-600">
+                    The shortcut needs tweaking. Replace the domain with your
+                    custom domain, and the token with your Token from the
+                    setting's generation.
+                  </p>
+                </div>
+
+                <img class="rounded-lg" src="/wingfit_stash_tweak.jpg" />
+              </div>
+
+              <div class="flex pt-6 justify-between">
+                <p-button
+                  label="Back"
+                  severity="secondary"
+                  icon="pi pi-arrow-left"
+                  (onClick)="activateCallback(1)"
+                />
+                <p-button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  iconPos="right"
+                  (onClick)="activateCallback(3)"
+                />
+              </div>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <p-step-panel [value]="3">
+          <ng-template #content let-activateCallback="activateCallback">
+            <div class="max-w-96 md:max-w-xl mx-auto">
+              <div class="flex flex-col items-center text-center">
+                <div class="p-4 pt-0">
+                  <h2
+                    class="mb-0 text-2xl tracking-tight font-bold text-gray-900"
+                  >
+                    Select your text
+                  </h2>
+                  <p class="mt-2 text-gray-600">
+                    You can select text from pages or from images, then press
+                    <code>Share</code>
+                  </p>
+                </div>
+
+                <img class="rounded-lg" src="/wingfit_stash_share.jpg" />
+              </div>
+
+              <div class="flex pt-6 justify-between">
+                <p-button
+                  label="Back"
+                  severity="secondary"
+                  icon="pi pi-arrow-left"
+                  (onClick)="activateCallback(2)"
+                />
+                <p-button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  iconPos="right"
+                  (onClick)="activateCallback(4)"
+                />
+              </div>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <p-step-panel [value]="4">
+          <ng-template #content let-activateCallback="activateCallback">
+            <div class="max-w-96 md:max-w-xl mx-auto">
+              <div class="flex flex-col items-center text-center">
+                <div class="p-4 pt-0">
+                  <h2
+                    class="mb-0 text-2xl tracking-tight font-bold text-gray-900"
+                  >
+                    Share using your iOS Shortcut
+                  </h2>
+                  <p class="mt-2 text-gray-600">
+                    Once correctly setup, the shortcut will be displayed in your
+                    actions.
+                  </p>
+                </div>
+                <p-message showTransitionOptions="" severity="info"
+                  >The first time you execute the shortcut, iOS will ask you if
+                  you allow the communication to Wingfit. This is normal, press
+                  <code>Always allow</code>.</p-message
+                >
+
+                <img class="mt-4 rounded-lg" src="/wingfit_stash_stash.jpg" />
+              </div>
+
+              <div class="flex pt-6 justify-between">
+                <p-button
+                  label="Back"
+                  severity="secondary"
+                  icon="pi pi-arrow-left"
+                  (onClick)="activateCallback(3)"
+                />
+                <p-button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  iconPos="right"
+                  (onClick)="activateCallback(5)"
+                />
+              </div>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <p-step-panel [value]="5">
+          <ng-template #content let-activateCallback="activateCallback">
+            <div class="max-w-96 md:max-w-xl mx-auto">
+              <div class="flex flex-col items-center">
+                <div class="p-4 text-center">
+                  <h2
+                    class="mb-0 text-2xl tracking-tight font-bold text-gray-900"
+                  >
+                    Create your bloc
+                  </h2>
+                  <p class="mt-2 text-gray-600">
+                    There is a new Bloc in the Stash ! You can now click on the
+                    Bloc and create it
+                  </p>
+                </div>
+
+                <img class="rounded-lg" src="/wingfit_stash_success.jpg" />
+              </div>
+
+              <div class="flex pt-6 justify-between">
+                <p-button
+                  label="Back"
+                  severity="secondary"
+                  icon="pi pi-arrow-left"
+                  (onClick)="activateCallback(4)"
+                />
+                <p-button
+                  label="Close"
+                  severity="success"
+                  icon="pi pi-times"
+                  (onClick)="close()"
+                />
+              </div>
+            </div>
+          </ng-template>
+        </p-step-panel>
+      </p-step-panels>
+    </p-stepper>
+  </div>
+</section>
