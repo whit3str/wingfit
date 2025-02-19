@@ -1,4 +1,9 @@
-import { Component, OnDestroy, ViewChild } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
+import {
+  DragDropModule,
+  CdkDragDrop,
+  transferArrayItem,
+} from '@angular/cdk/drag-drop';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { ToolbarModule } from 'primeng/toolbar';
@@ -10,7 +15,7 @@ import { DatePipe } from '@angular/common';
 import { BlocComponent } from '../../shared/bloc/bloc.component';
 import { Bloc, BlocResult } from '../../types/bloc';
 import { ApiService } from '../../services/api.service';
-import { forkJoin, Observable, Subscription, take } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
 import { MinutesToHoursPipe } from '../../shared/minutesToHour.pipe';
 import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
@@ -37,6 +42,7 @@ import { Popover, PopoverModule } from 'primeng/popover';
     BadgeModule,
     OverlayBadgeModule,
     CardModule,
+    DragDropModule,
     DatePipe,
     BlocComponent,
     MinutesToHoursPipe,
@@ -45,10 +51,8 @@ import { Popover, PopoverModule } from 'primeng/popover';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
-export class DashboardComponent implements OnDestroy {
+export class DashboardComponent {
   @ViewChild('op') op?: Popover;
-  subscriptions: Subscription[] = [];
-
   todayDate: Date;
   selectedDate: Date;
   selectedDate_firstDayOfWeek: Date;
@@ -129,14 +133,14 @@ export class DashboardComponent implements OnDestroy {
       },
     );
 
-    modal.onClose.subscribe((bloc: Bloc | null) => {
-      if (bloc) {
-        this.apiService
-          .postBloc(bloc)
-          .subscribe((bloc: Bloc) =>
-            this.displayedBlocInteraction('create', bloc),
-          );
-      }
+    modal.onClose.subscribe({
+      next: (bloc: Bloc | null) => {
+        if (bloc) {
+          this.apiService.postBloc(bloc).subscribe({
+            next: (bloc: Bloc) => this.displayedBlocInteraction('create', bloc),
+          });
+        }
+      },
     });
   }
 
@@ -288,11 +292,13 @@ export class DashboardComponent implements OnDestroy {
       data: this.selectedDate,
     });
 
-    modal.onClose.subscribe((date: Date | null) => {
-      if (date) {
-        this.selectedDate = new Date(this.utilsService.setHoursNoon(date));
-        this.updateDateBlocs();
-      }
+    modal.onClose.subscribe({
+      next: (date: Date | null) => {
+        if (date) {
+          this.selectedDate = new Date(this.utilsService.setHoursNoon(date));
+          this.updateDateBlocs();
+        }
+      },
     });
   }
 
@@ -356,43 +362,94 @@ export class DashboardComponent implements OnDestroy {
       },
     );
 
-    modal.onClose.subscribe((bool) => {
-      if (bool) {
-        let POST_blocs$: Observable<Bloc>[] = Object.values(this.displayedBlocs)
-          .flatMap((blocs_by_date) => blocs_by_date) // Retrieve blocs displayed in week and convert it to Array of Blocs
-          .map((bloc: any) => {
-            let _bloc = { ...bloc };
-            let blocDate = new Date(_bloc.cdate);
-            blocDate.setDate(blocDate.getDate() + 7);
-            return this.apiService.postBloc({
-              ..._bloc,
-              cdate: this.utilsService.Iso8601ToStr(blocDate),
+    modal.onClose.subscribe({
+      next: (bool) => {
+        if (bool) {
+          let POST_blocs$: Observable<Bloc>[] = Object.values(
+            this.displayedBlocs,
+          )
+            .flatMap((blocs_by_date) => blocs_by_date) // Retrieve blocs displayed in week and convert it to Array of Blocs
+            .map((bloc: any) => {
+              let _bloc = { ...bloc };
+              let blocDate = new Date(_bloc.cdate);
+              blocDate.setDate(blocDate.getDate() + 7);
+              return this.apiService.postBloc({
+                ..._bloc,
+                cdate: this.utilsService.Iso8601ToStr(blocDate),
+              });
             });
-          });
 
-        forkJoin(POST_blocs$).subscribe({
-          next: (_) => {
-            this.utilsService.toast(
-              'success',
-              'Success',
-              'Blocs were copied to next week',
-            );
-          },
-          error: (_) => {
-            this.utilsService.toast(
-              'error',
-              'Error during copy',
-              'An error occured during the blocs copy',
-            );
-          },
-        });
-      }
+          forkJoin(POST_blocs$).subscribe({
+            next: (_) => {
+              this.utilsService.toast(
+                'success',
+                'Success',
+                'Blocs were copied to next week',
+              );
+            },
+            error: (_) => {
+              this.utilsService.toast(
+                'error',
+                'Error during copy',
+                'An error occured during the blocs copy',
+              );
+            },
+          });
+        }
+      },
     });
   }
 
   blocClicked(ev: any, bloc: Bloc) {
-    this.clickedBloc = bloc;
-    this.op?.toggle(ev);
+    if (!this.selectionMode) {
+      this.clickedBloc = bloc;
+      this.op?.toggle(ev);
+      return;
+    }
+
+    // If it exists in selectedBlocs, it exists in selectedBlocsID as it's consistent, else we push it to both
+    if (this.selectedBlocs.some((selected) => selected.id == bloc.id)) {
+      this.selectedBlocs.splice(
+        this.selectedBlocs.findIndex((selected) => selected.id == bloc.id),
+        1,
+      );
+      this.selectedBlocsID.splice(this.selectedBlocsID.indexOf(bloc.id), 1);
+    } else {
+      this.selectedBlocs.push(bloc);
+      this.selectedBlocsID.push(bloc.id);
+    }
+  }
+
+  blocDbClicked(bloc: Bloc) {
+    this.op?.hide();
+    const modal = this.dialogService.open(BlocCreateModalComponent, {
+      header: 'Edit Bloc',
+      modal: true,
+      appendTo: 'body',
+      closable: true,
+      dismissableMask: true,
+      width: '40vw',
+      breakpoints: {
+        '960px': '60vw',
+        '640px': '90vw',
+      },
+      data: { ...bloc },
+    });
+
+    modal.onClose.subscribe({
+      next: (editedBloc: Bloc | null) => {
+        if (editedBloc) {
+          let blocModifiedKeysOnly: Partial<Bloc> =
+            this.utilsService.getModifiedFields(bloc, editedBloc);
+
+          if (Object.keys(blocModifiedKeysOnly).length) {
+            this.apiService.putBloc(bloc.id, blocModifiedKeysOnly).subscribe({
+              next: (bloc) => this.displayedBlocInteraction('edit', bloc),
+            });
+          }
+        }
+      },
+    });
   }
 
   handleBlocAction(action: string) {
@@ -402,25 +459,6 @@ export class DashboardComponent implements OnDestroy {
     if (bloc) {
       let modal: DynamicDialogRef;
       switch (action) {
-        case 'select':
-          // If it exists in selectedBlocs, it exists in selectedBlocsID as it's consistent, else we push it to both
-          if (this.selectedBlocs.some((selected) => selected.id == bloc.id)) {
-            this.selectedBlocs.splice(
-              this.selectedBlocs.findIndex(
-                (selected) => selected.id == bloc.id,
-              ),
-              1,
-            );
-            this.selectedBlocsID.splice(
-              this.selectedBlocsID.indexOf(bloc.id),
-              1,
-            );
-          } else {
-            this.selectedBlocs.push(bloc);
-            this.selectedBlocsID.push(bloc.id);
-          }
-          break;
-
         case 'result':
           modal = this.dialogService.open(BlocResultCreateModalComponent, {
             header: 'Result',
@@ -439,19 +477,21 @@ export class DashboardComponent implements OnDestroy {
             },
           });
 
-          modal.onClose.subscribe((result: BlocResult | boolean | null) => {
-            if (result === true) {
-              // True is returned if the delete is done
-              bloc.result = undefined;
-              return;
-            }
+          modal.onClose.subscribe({
+            next: (result: BlocResult | boolean | null) => {
+              if (result === true) {
+                // True is returned if the delete is done
+                bloc.result = undefined;
+                return;
+              }
 
-            if (result) {
-              // BlocResult | null otherwise, so we check
-              this.apiService.putBlocResult(bloc.id, result).subscribe({
-                next: (result) => (bloc.result = result),
-              });
-            }
+              if (result) {
+                // BlocResult | null otherwise, so we check
+                this.apiService.putBlocResult(bloc.id, result).subscribe({
+                  next: (result) => (bloc.result = result),
+                });
+              }
+            },
           });
           break;
 
@@ -470,19 +510,22 @@ export class DashboardComponent implements OnDestroy {
             data: { ...bloc },
           });
 
-          modal.onClose.subscribe((editedBloc: Bloc | null) => {
-            if (editedBloc) {
-              let blocModifiedKeysOnly: Partial<Bloc> =
-                this.utilsService.getModifiedFields(bloc, editedBloc);
+          modal.onClose.subscribe({
+            next: (editedBloc: Bloc | null) => {
+              if (editedBloc) {
+                let blocModifiedKeysOnly: Partial<Bloc> =
+                  this.utilsService.getModifiedFields(bloc, editedBloc);
 
-              if (Object.keys(blocModifiedKeysOnly).length) {
-                this.apiService
-                  .putBloc(bloc.id, blocModifiedKeysOnly)
-                  .subscribe((bloc) =>
-                    this.displayedBlocInteraction('edit', bloc),
-                  );
+                if (Object.keys(blocModifiedKeysOnly).length) {
+                  this.apiService
+                    .putBloc(bloc.id, blocModifiedKeysOnly)
+                    .subscribe({
+                      next: (bloc) =>
+                        this.displayedBlocInteraction('edit', bloc),
+                    });
+                }
               }
-            }
+            },
           });
           break;
 
@@ -496,17 +539,20 @@ export class DashboardComponent implements OnDestroy {
             data: { ...bloc },
           });
 
-          modal.onClose.subscribe((date: Date | null) => {
-            if (date) {
-              this.apiService
-                .postBloc({
-                  ...bloc,
-                  cdate: this.utilsService.Iso8601ToStr(date),
-                })
-                .subscribe((bloc) =>
-                  this.displayedBlocInteraction('create', bloc),
-                );
-            }
+          modal.onClose.subscribe({
+            next: (date: Date | null) => {
+              if (date) {
+                this.apiService
+                  .postBloc({
+                    ...bloc,
+                    cdate: this.utilsService.Iso8601ToStr(date),
+                  })
+                  .subscribe({
+                    next: (bloc) =>
+                      this.displayedBlocInteraction('create', bloc),
+                  });
+              }
+            },
           });
           break;
 
@@ -520,16 +566,18 @@ export class DashboardComponent implements OnDestroy {
             data: { ...bloc },
           });
 
-          modal.onClose.subscribe((date: Date | null) => {
-            if (date) {
-              this.apiService
-                .putBloc(bloc.id, {
-                  cdate: this.utilsService.Iso8601ToStr(date),
-                })
-                .subscribe((bloc) =>
-                  this.displayedBlocInteraction('move', bloc),
-                );
-            }
+          modal.onClose.subscribe({
+            next: (date: Date | null) => {
+              if (date) {
+                this.apiService
+                  .putBloc(bloc.id, {
+                    cdate: this.utilsService.Iso8601ToStr(date),
+                  })
+                  .subscribe({
+                    next: (bloc) => this.displayedBlocInteraction('move', bloc),
+                  });
+              }
+            },
           });
           break;
 
@@ -545,14 +593,14 @@ export class DashboardComponent implements OnDestroy {
             data: `Delete the ${bloc.category.name} Bloc ?`,
           });
 
-          modal.onClose.subscribe((bool) => {
-            if (bool) {
-              this.apiService
-                .deleteBloc(bloc.id)
-                .subscribe((_) =>
-                  this.displayedBlocInteraction('delete', bloc),
-                );
-            }
+          modal.onClose.subscribe({
+            next: (bool) => {
+              if (bool) {
+                this.apiService.deleteBloc(bloc.id).subscribe({
+                  next: (_) => this.displayedBlocInteraction('delete', bloc),
+                });
+              }
+            },
           });
           break;
 
@@ -590,32 +638,34 @@ export class DashboardComponent implements OnDestroy {
       dismissableMask: true,
     });
 
-    modal.onClose.subscribe((date: Date | null) => {
-      if (date) {
-        let _date: string = this.utilsService.Iso8601ToStr(date); //To not call everytime the fn
+    modal.onClose.subscribe({
+      next: (date: Date | null) => {
+        if (date) {
+          let _date: string = this.utilsService.Iso8601ToStr(date); //To not call everytime the fn
 
-        this.apiService
-          .postBlocs(
-            // POST every blocs at once
-            this.selectedBlocs.map((bloc: Bloc) => {
-              return { ...bloc, cdate: _date };
-            }),
-          )
-          .subscribe({
-            next: (blocs: Bloc[]) => {
-              this.displayedBlocInteraction('create', blocs);
-            },
-            error: () => {
-              this.utilsService.toast(
-                'error',
-                'Error',
-                'Error while copying blocs',
-              );
-              this.disableSelectionMode();
-            },
-          });
-      }
-      this.disableSelectionMode();
+          this.apiService
+            .postBlocs(
+              // POST every blocs at once
+              this.selectedBlocs.map((bloc: Bloc) => {
+                return { ...bloc, cdate: _date };
+              }),
+            )
+            .subscribe({
+              next: (blocs: Bloc[]) => {
+                this.displayedBlocInteraction('create', blocs);
+              },
+              error: () => {
+                this.utilsService.toast(
+                  'error',
+                  'Error',
+                  'Error while copying blocs',
+                );
+                this.disableSelectionMode();
+              },
+            });
+        }
+        this.disableSelectionMode();
+      },
     });
   }
 
@@ -628,28 +678,30 @@ export class DashboardComponent implements OnDestroy {
       dismissableMask: true,
     });
 
-    modal.onClose.subscribe((date: Date | null) => {
-      if (date) {
-        let _date: string = this.utilsService.Iso8601ToStr(date); //To not call everytime the fn
-        this.selectedBlocs.forEach((bloc: Bloc) => {
-          this.apiService
-            .putBloc(bloc.id, { ...bloc, cdate: _date })
-            .subscribe({
-              error: () => {
-                this.utilsService.toast(
-                  'error',
-                  'Error',
-                  'Error while moving blocs',
-                );
-                this.disableSelectionMode();
-              },
-              complete: () => {
-                this.displayedBlocInteraction('edit', bloc);
-              },
-            });
-        });
-      }
-      this.disableSelectionMode();
+    modal.onClose.subscribe({
+      next: (date: Date | null) => {
+        if (date) {
+          let _date: string = this.utilsService.Iso8601ToStr(date); //To not call everytime the fn
+          this.selectedBlocs.forEach((bloc: Bloc) => {
+            this.apiService
+              .putBloc(bloc.id, { ...bloc, cdate: _date })
+              .subscribe({
+                error: () => {
+                  this.utilsService.toast(
+                    'error',
+                    'Error',
+                    'Error while moving blocs',
+                  );
+                  this.disableSelectionMode();
+                },
+                complete: () => {
+                  this.displayedBlocInteraction('edit', bloc);
+                },
+              });
+          });
+        }
+        this.disableSelectionMode();
+      },
     });
   }
 
@@ -666,45 +718,54 @@ export class DashboardComponent implements OnDestroy {
       data: `Delete ${this.selectedBlocs.length} bloc${this.selectedBlocs.length ? 's' : ''} ?`,
     });
 
-    modal.onClose.subscribe((bool: boolean | null) => {
-      if (bool) {
-        this.selectedBlocs.forEach((bloc: Bloc) => {
-          this.apiService.deleteBloc(bloc.id).subscribe({
-            error: () => {
-              this.utilsService.toast(
-                'error',
-                'Error',
-                'Error while deleting blocs',
-              );
-              this.disableSelectionMode();
-            },
-            complete: () => {
-              this.displayedBlocInteraction('delete', bloc);
-            },
+    modal.onClose.subscribe({
+      next: (bool: boolean | null) => {
+        if (bool) {
+          this.selectedBlocs.forEach((bloc: Bloc) => {
+            this.apiService.deleteBloc(bloc.id).subscribe({
+              error: () => {
+                this.utilsService.toast(
+                  'error',
+                  'Error',
+                  'Error while deleting blocs',
+                );
+                this.disableSelectionMode();
+              },
+              complete: () => {
+                this.displayedBlocInteraction('delete', bloc);
+              },
+            });
           });
-        });
-      }
-      this.disableSelectionMode();
+        }
+        this.disableSelectionMode();
+      },
     });
   }
 
   enableSelectionMode(): void {
     this.selectionMode = true;
-    this.blocClickActions.unshift({
-      text: 'Toggle selection',
-      icon: 'pi pi-check-square',
-      action: 'select',
-    });
   }
 
   disableSelectionMode(): void {
     this.selectionMode = false;
     this.selectedBlocs = [];
     this.selectedBlocsID = [];
-    this.blocClickActions.shift();
   }
 
-  ngOnDestroy(): void {
-    this.subscriptions.forEach((s) => s.unsubscribe());
+  blocDrop(event: CdkDragDrop<Bloc[]>, newDate: Date) {
+    if (event.previousContainer !== event.container) {
+      transferArrayItem(
+        event.previousContainer.data,
+        event.container.data,
+        event.previousIndex,
+        event.currentIndex,
+      );
+
+      this.apiService
+        .putBloc(event.item.data, {
+          cdate: this.dateToStr(newDate),
+        })
+        .subscribe();
+    }
   }
 }
