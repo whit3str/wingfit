@@ -2,9 +2,7 @@ import { Component, ViewChild } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ApiService } from '../../services/api.service';
-import { Observable } from 'rxjs';
 import { BlocCategory } from '../../types/bloc';
-import { AsyncPipe } from '@angular/common';
 import { UtilsService } from '../../services/utils.service';
 import { User } from '../../types/user';
 import { DialogService } from 'primeng/dynamicdialog';
@@ -15,15 +13,21 @@ import { Popover, PopoverModule } from 'primeng/popover';
 import { SettingsCreateCategoryComponent } from '../../modals/settings-create-category/settings-create-category.component';
 import { SettingsViewTokenComponent } from '../../modals/settings-view-token/settings-view-token.component';
 import { Info } from '../../types/info';
+import {
+  DragDropModule,
+  CdkDragDrop,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { SkeletonModule } from 'primeng/skeleton';
+import { forkJoin, Observable } from 'rxjs';
 
 @Component({
   selector: 'app-settings',
   imports: [
     CardModule,
     ButtonModule,
-    AsyncPipe,
     InputTextModule,
+    DragDropModule,
     SkeletonModule,
     FloatLabelModule,
     PopoverModule,
@@ -34,17 +38,22 @@ import { SkeletonModule } from 'primeng/skeleton';
 })
 export class SettingsComponent {
   @ViewChild('op') op?: Popover;
-  categories$: Observable<BlocCategory[]>;
+  categories: BlocCategory[] = [];
+  temporarySortingCategories: BlocCategory[] = [];
   info: Info | undefined;
   user: User | undefined;
   categoryInteracted: BlocCategory | undefined;
+  isSortingCategories = false;
 
   constructor(
     private apiService: ApiService,
     private utilsService: UtilsService,
     private dialogService: DialogService,
   ) {
-    this.categories$ = this.apiService.getCategories();
+    this.apiService.getCategories().subscribe({
+      next: (categories) => (this.categories = categories),
+    });
+
     this.apiService.getInfo().subscribe({
       next: (info) => (this.info = info),
     });
@@ -83,10 +92,10 @@ export class SettingsComponent {
       },
     });
 
-    modal.onClose.subscribe((category: BlocCategory | null) => {
-      if (category) {
-        this.apiService.postCategory(category).subscribe();
-      }
+    modal.onClose.subscribe({
+      next: (category: BlocCategory | null) => {
+        if (category) this.apiService.postCategory(category).subscribe();
+      },
     });
   }
 
@@ -108,23 +117,58 @@ export class SettingsComponent {
         data: { ...selectedCategory },
       });
 
-      modal.onClose.subscribe((editedCategory: BlocCategory | null) => {
-        if (editedCategory) {
-          let categoryModifiedKeysOnly: Partial<BlocCategory> =
-            this.utilsService.getModifiedFields(
-              selectedCategory,
-              editedCategory,
-            );
-          if (Object.keys(categoryModifiedKeysOnly).length) {
-            this.apiService
-              .putCategory(selectedCategory.id!, categoryModifiedKeysOnly)
-              .subscribe((category) => {
-                category = category;
-              });
+      modal.onClose.subscribe({
+        next: (editedCategory: BlocCategory | null) => {
+          if (editedCategory) {
+            let categoryModifiedKeysOnly: Partial<BlocCategory> =
+              this.utilsService.getModifiedFields(
+                selectedCategory,
+                editedCategory,
+              );
+            if (Object.keys(categoryModifiedKeysOnly).length) {
+              this.apiService
+                .putCategory(selectedCategory.id!, categoryModifiedKeysOnly)
+                .subscribe({
+                  next: (category) => {
+                    category = category;
+                  },
+                });
+            }
           }
-        }
+        },
       });
     }
+  }
+
+  toggleCategoriesSorting() {
+    this.isSortingCategories = !this.isSortingCategories;
+    if (this.isSortingCategories)
+      this.temporarySortingCategories = [...this.categories];
+  }
+
+  categoryDrop(event: CdkDragDrop<BlocCategory[]>) {
+    moveItemInArray(
+      this.temporarySortingCategories,
+      event.previousIndex,
+      event.currentIndex,
+    );
+  }
+
+  categoriesSort() {
+    let observables$: Observable<BlocCategory>[] = [];
+    this.temporarySortingCategories.forEach((c, index) =>
+      observables$.push(
+        this.apiService.putCategory(c.id, { ...c, weight: index + 1 }), // Min value should be 1 not 0, so +1
+      ),
+    );
+
+    forkJoin(observables$).subscribe({
+      next: (categories: BlocCategory[]) => {
+        this.categories = categories;
+        this.toggleCategoriesSorting();
+        this.temporarySortingCategories = [];
+      },
+    });
   }
 
   deleteCategory() {
@@ -153,12 +197,13 @@ export class SettingsComponent {
               data: `Delete ${selectedCategory.name} ?`,
             });
 
-            modal.onClose.subscribe((bool) => {
-              if (bool && selectedCategory) {
-                this.apiService
-                  .deleteCategory(selectedCategory.id!)
-                  .subscribe((_) => {});
-              }
+            modal.onClose.subscribe({
+              next: (bool) => {
+                if (bool && selectedCategory)
+                  this.apiService
+                    .deleteCategory(selectedCategory.id!)
+                    .subscribe();
+              },
             });
           }
         },
@@ -168,20 +213,22 @@ export class SettingsComponent {
 
   // Access Token
   enableAccessToken() {
-    this.apiService.enableAccessToken().subscribe((token) => {
-      if (token && this.user) {
-        this.user.api_token = !!token;
-        this.dialogService.open(SettingsViewTokenComponent, {
-          header: 'Access Token',
-          modal: true,
-          closable: true,
-          dismissableMask: true,
-          breakpoints: {
-            '640px': '90vw',
-          },
-          data: token,
-        });
-      }
+    this.apiService.enableAccessToken().subscribe({
+      next: (token) => {
+        if (token && this.user) {
+          this.user.api_token = !!token;
+          this.dialogService.open(SettingsViewTokenComponent, {
+            header: 'Access Token',
+            modal: true,
+            closable: true,
+            dismissableMask: true,
+            breakpoints: {
+              '640px': '90vw',
+            },
+            data: token,
+          });
+        }
+      },
     });
   }
 
@@ -197,12 +244,13 @@ export class SettingsComponent {
       data: `Remove your API Token ?`,
     });
 
-    modal.onClose.subscribe((bool) => {
-      if (bool) {
-        this.apiService.disableAccessToken().subscribe({
-          next: (_) => (this.user!.api_token = false),
-        });
-      }
+    modal.onClose.subscribe({
+      next: (bool) => {
+        if (bool)
+          this.apiService.disableAccessToken().subscribe({
+            next: (_) => (this.user!.api_token = false),
+          });
+      },
     });
   }
 
