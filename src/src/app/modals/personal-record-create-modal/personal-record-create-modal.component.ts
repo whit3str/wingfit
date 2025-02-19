@@ -55,8 +55,10 @@ export class PersonalRecordCreateModalComponent {
       values: this.fb.array([], uniqueValidator('cdate')),
     });
 
-    this.prForm.get('key')?.valueChanges.subscribe((key) => {
-      this.updateValuesValidators(key);
+    this.prForm.get('key')?.valueChanges.subscribe({
+      next: (key) => {
+        this.updateValuesValidators(key);
+      },
     });
   }
 

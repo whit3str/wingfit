@@ -79,10 +79,10 @@ export class ProgramComponent {
               dismissableMask: true,
             });
 
-            modal.onClose.subscribe((date: Date | null) => {
-              if (date) {
-                this.programToCalendar(date);
-              }
+            modal.onClose.subscribe({
+              next: (date: Date | null) => {
+                if (date) this.programToCalendar(date);
+              },
             });
           } else {
             this.utilsService.toast(
@@ -111,26 +111,30 @@ export class ProgramComponent {
             data: this.program,
           });
 
-          modal.onClose.subscribe((editedProgram: Program | null) => {
-            if (editedProgram && this.program) {
-              // If the editedProgram image starts with '/api', it means it was not modified
-              // We delete it because /api/assets/image will be different than image, so it would be returned by getModifiedFields
-              if (editedProgram.image?.startsWith('/api'))
-                delete editedProgram.image;
+          modal.onClose.subscribe({
+            next: (editedProgram: Program | null) => {
+              if (editedProgram && this.program) {
+                // If the editedProgram image starts with '/api', it means it was not modified
+                // We delete it because /api/assets/image will be different than image, so it would be returned by getModifiedFields
+                if (editedProgram.image?.startsWith('/api'))
+                  delete editedProgram.image;
 
-              let programModifiedKeysOnly: Partial<Program> =
-                this.utilsService.getModifiedFields(
-                  this.program,
-                  editedProgram,
-                );
-              if (Object.keys(programModifiedKeysOnly).length) {
-                this.apiService
-                  .putProgram(this.program.id, programModifiedKeysOnly)
-                  .subscribe((program) => {
-                    this.program = program;
-                  });
+                let programModifiedKeysOnly: Partial<Program> =
+                  this.utilsService.getModifiedFields(
+                    this.program,
+                    editedProgram,
+                  );
+                if (Object.keys(programModifiedKeysOnly).length) {
+                  this.apiService
+                    .putProgram(this.program.id, programModifiedKeysOnly)
+                    .subscribe({
+                      next: (program) => {
+                        this.program = program;
+                      },
+                    });
+                }
               }
-            }
+            },
           });
         },
       },
@@ -150,14 +154,13 @@ export class ProgramComponent {
               data: `Delete ${this.program.name} ?`,
             });
 
-            modal.onClose.subscribe((bool) => {
-              if (bool) {
-                this.apiService
-                  .deleteProgram(this.program!.id)
-                  .subscribe((_) => {
-                    this.router.navigateByUrl('/programs');
+            modal.onClose.subscribe({
+              next: (bool) => {
+                if (bool)
+                  this.apiService.deleteProgram(this.program!.id).subscribe({
+                    next: (_) => this.router.navigateByUrl('/programs'),
                   });
-              }
+              },
             });
           }
         },
@@ -175,18 +178,21 @@ export class ProgramComponent {
       data: { ...bloc },
     });
 
-    modal.onClose.subscribe((date: Date | null) => {
-      if (date) {
-        this.apiService
-          .postBloc({ ...bloc, cdate: this.utilsService.Iso8601ToStr(date) })
-          .subscribe((bloc) => {
-            this.utilsService.toast(
-              'success',
-              'Success',
-              `Bloc created on ${this.utilsService.Iso8601ToStr(date)}`,
-            );
-          });
-      }
+    modal.onClose.subscribe({
+      next: (date: Date | null) => {
+        if (date)
+          this.apiService
+            .postBloc({ ...bloc, cdate: this.utilsService.Iso8601ToStr(date) })
+            .subscribe({
+              next: (_) => {
+                this.utilsService.toast(
+                  'success',
+                  'Success',
+                  `Bloc created on ${this.utilsService.Iso8601ToStr(date)}`,
+                );
+              },
+            });
+      },
     });
   }
 
@@ -207,14 +213,16 @@ export class ProgramComponent {
       dismissableMask: true,
     });
 
-    modal.onClose.subscribe((step: ProgramStep | null) => {
-      if (step && this.program) {
-        this.apiService.postProgramStep(this.program.id, step).subscribe({
-          next: (step) => {
-            this.program?.steps.push(step);
-          },
-        });
-      }
+    modal.onClose.subscribe({
+      next: (step: ProgramStep | null) => {
+        if (step && this.program) {
+          this.apiService.postProgramStep(this.program.id, step).subscribe({
+            next: (step) => {
+              this.program?.steps.push(step);
+            },
+          });
+        }
+      },
     });
   }
 
@@ -228,28 +236,30 @@ export class ProgramComponent {
       data: { ...step },
     });
 
-    modal.onClose.subscribe((editedStep: ProgramStep | null) => {
-      if (editedStep) {
-        let programStepModifiedKeysOnly: Partial<ProgramStep> =
-          this.utilsService.getModifiedFields(step, editedStep);
+    modal.onClose.subscribe({
+      next: (editedStep: ProgramStep | null) => {
+        if (editedStep) {
+          let programStepModifiedKeysOnly: Partial<ProgramStep> =
+            this.utilsService.getModifiedFields(step, editedStep);
 
-        if (Object.keys(programStepModifiedKeysOnly).length) {
-          this.apiService
-            .putProgramStep(
-              this.program!.id,
-              step.id,
-              programStepModifiedKeysOnly,
-            )
-            .subscribe({
-              next: (step) => {
-                let stepIndex = this.program!.steps.findIndex(
-                  (s) => s.id == step.id,
-                );
-                if (stepIndex > -1) this.program!.steps[stepIndex] = step;
-              },
-            });
+          if (Object.keys(programStepModifiedKeysOnly).length) {
+            this.apiService
+              .putProgramStep(
+                this.program!.id,
+                step.id,
+                programStepModifiedKeysOnly,
+              )
+              .subscribe({
+                next: (step) => {
+                  let stepIndex = this.program!.steps.findIndex(
+                    (s) => s.id == step.id,
+                  );
+                  if (stepIndex > -1) this.program!.steps[stepIndex] = step;
+                },
+              });
+          }
         }
-      }
+      },
     });
   }
 
@@ -265,21 +275,23 @@ export class ProgramComponent {
       data: `Delete ${stepToRemove.name} ?`,
     });
 
-    modal.onClose.subscribe((bool) => {
-      if (bool) {
-        this.apiService
-          .deleteProgramStep(this.program!.id, stepToRemove.id)
-          .subscribe({
-            next: (_) => {
-              let stepIndex = this.program!.steps.findIndex(
-                (step) => step.id == stepToRemove.id,
-              );
-              if (stepIndex > -1) {
-                this.program?.steps?.splice(stepIndex, 1);
-              }
-            },
-          });
-      }
+    modal.onClose.subscribe({
+      next: (bool) => {
+        if (bool) {
+          this.apiService
+            .deleteProgramStep(this.program!.id, stepToRemove.id)
+            .subscribe({
+              next: (_) => {
+                let stepIndex = this.program!.steps.findIndex(
+                  (step) => step.id == stepToRemove.id,
+                );
+                if (stepIndex > -1) {
+                  this.program?.steps?.splice(stepIndex, 1);
+                }
+              },
+            });
+        }
+      },
     });
   }
 
@@ -297,18 +309,20 @@ export class ProgramComponent {
       },
     });
 
-    modal.onClose.subscribe((bloc: ProgramBloc | null) => {
-      if (bloc) {
-        this.apiService
-          .postProgramStepBloc(this.program!.id, step_id, bloc)
-          .subscribe({
-            next: (bloc) => {
-              this.program?.steps
-                .find((step) => step.id == step_id)
-                ?.blocs.push(bloc);
-            },
-          });
-      }
+    modal.onClose.subscribe({
+      next: (bloc: ProgramBloc | null) => {
+        if (bloc) {
+          this.apiService
+            .postProgramStepBloc(this.program!.id, step_id, bloc)
+            .subscribe({
+              next: (bloc) => {
+                this.program?.steps
+                  .find((step) => step.id == step_id)
+                  ?.blocs.push(bloc);
+              },
+            });
+        }
+      },
     });
   }
 
@@ -327,27 +341,29 @@ export class ProgramComponent {
       data: { ...bloc },
     });
 
-    modal.onClose.subscribe((editedBloc: ProgramBloc | null) => {
-      if (editedBloc) {
-        let blocModifiedKeysOnly: Partial<ProgramBloc> =
-          this.utilsService.getModifiedFields(bloc, editedBloc);
+    modal.onClose.subscribe({
+      next: (editedBloc: ProgramBloc | null) => {
+        if (editedBloc) {
+          let blocModifiedKeysOnly: Partial<ProgramBloc> =
+            this.utilsService.getModifiedFields(bloc, editedBloc);
 
-        if (Object.keys(blocModifiedKeysOnly).length) {
-          this.apiService
-            .putProgramStepBloc(
-              this.program!.id,
-              step.id,
-              bloc.id,
-              blocModifiedKeysOnly,
-            )
-            .subscribe({
-              next: (bloc) => {
-                let blocIndex = step.blocs.findIndex((b) => b.id == bloc.id);
-                if (blocIndex > -1) step.blocs[blocIndex] = bloc;
-              },
-            });
+          if (Object.keys(blocModifiedKeysOnly).length) {
+            this.apiService
+              .putProgramStepBloc(
+                this.program!.id,
+                step.id,
+                bloc.id,
+                blocModifiedKeysOnly,
+              )
+              .subscribe({
+                next: (bloc) => {
+                  let blocIndex = step.blocs.findIndex((b) => b.id == bloc.id);
+                  if (blocIndex > -1) step.blocs[blocIndex] = bloc;
+                },
+              });
+          }
         }
-      }
+      },
     });
   }
 
@@ -363,21 +379,22 @@ export class ProgramComponent {
       data: 'Delete the Bloc ?',
     });
 
-    modal.onClose.subscribe((bool) => {
-      if (bool) {
-        this.apiService
-          .deleteProgramStepBloc(this.program!.id, step.id, bloc_id)
-          .subscribe({
-            next: (_) => {
-              let blocIndex = step.blocs.findIndex(
-                (bloc) => bloc.id == bloc_id,
-              );
-              if (blocIndex > -1) {
-                step.blocs.splice(blocIndex, 1);
-              }
-            },
-          });
-      }
+    modal.onClose.subscribe({
+      next: (bool) => {
+        if (bool)
+          this.apiService
+            .deleteProgramStepBloc(this.program!.id, step.id, bloc_id)
+            .subscribe({
+              next: (_) => {
+                let blocIndex = step.blocs.findIndex(
+                  (bloc) => bloc.id == bloc_id,
+                );
+                if (blocIndex > -1) {
+                  step.blocs.splice(blocIndex, 1);
+                }
+              },
+            });
+      },
     });
   }
 
@@ -406,25 +423,27 @@ export class ProgramComponent {
       dismissableMask: true,
     });
 
-    modal.onClose.subscribe((date: Date | null) => {
-      if (date) {
-        let blocs = this.prepareStepBlocs(step, date);
-        this.apiService.postBlocs(blocs).subscribe({
-          next: (_) => {
-            this.utilsService.toast(
-              'success',
-              'Success',
-              `${blocs.length} bloc${blocs.length > 1 ? 's' : ''} added to planning`,
-            );
-          },
-          error: (_) =>
-            this.utilsService.toast(
-              'danger',
-              'Error creating blocs',
-              'An error occured while creating the blocs',
-            ),
-        });
-      }
+    modal.onClose.subscribe({
+      next: (date: Date | null) => {
+        if (date) {
+          let blocs = this.prepareStepBlocs(step, date);
+          this.apiService.postBlocs(blocs).subscribe({
+            next: (_) => {
+              this.utilsService.toast(
+                'success',
+                'Success',
+                `${blocs.length} bloc${blocs.length > 1 ? 's' : ''} added to planning`,
+              );
+            },
+            error: (_) =>
+              this.utilsService.toast(
+                'danger',
+                'Error creating blocs',
+                'An error occured while creating the blocs',
+              ),
+          });
+        }
+      },
     });
   }
 

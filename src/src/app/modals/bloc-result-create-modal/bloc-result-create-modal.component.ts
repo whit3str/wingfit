@@ -54,8 +54,10 @@ export class BlocResultCreateModalComponent {
       comment: '',
     });
 
-    this.resultForm.get('key')?.valueChanges.subscribe((key) => {
-      this.updateValueValidator(key);
+    this.resultForm.get('key')?.valueChanges.subscribe({
+      next: (key) => {
+        this.updateValueValidator(key);
+      },
     });
 
     if (this.config.data.result) {

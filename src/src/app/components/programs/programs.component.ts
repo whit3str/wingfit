@@ -68,12 +68,13 @@ export class ProgramsComponent {
       },
     );
 
-    modal.onClose.subscribe((program: Program | null) => {
-      if (program) {
-        this.apiService.postProgram(program).subscribe({
-          next: (program) => this.programs.push(program),
-        });
-      }
+    modal.onClose.subscribe({
+      next: (program: Program | null) => {
+        if (program)
+          this.apiService.postProgram(program).subscribe({
+            next: (program) => this.programs.push(program),
+          });
+      },
     });
   }
 
@@ -107,15 +108,17 @@ export class ProgramsComponent {
           data: `Confirm ${files[0].name} upload ?`,
         });
 
-        modal.onClose.subscribe((bool) => {
-          if (bool) {
-            const formData: FormData = new FormData();
-            formData.append('file', files[0]);
+        modal.onClose.subscribe({
+          next: (bool) => {
+            if (bool) {
+              const formData: FormData = new FormData();
+              formData.append('file', files[0]);
 
-            this.apiService.uploadProgram(formData).subscribe((program) => {
-              this.programs.push(program);
-            });
-          }
+              this.apiService.uploadProgram(formData).subscribe({
+                next: (program) => this.programs.push(program),
+              });
+            }
+          },
         });
       };
       reader.readAsText(files[0]);

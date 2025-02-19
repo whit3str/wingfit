@@ -46,27 +46,28 @@ export class StashComponent {
       data: { ...stash_bloc, id: -1 }, // id: -1 to ensure the modal does not use ID (button would display Update instead of Create)
     });
 
-    modal.onClose.subscribe((bloc: Bloc | null) => {
-      if (bloc) {
-        this.apiService.postBloc(bloc).subscribe({
-          next: (_) => {
-            this.utilsService.toast(
-              'success',
-              'Success',
-              'Bloc added to planning',
-            );
-            this.apiService.deleteStash(stash_bloc.id!).subscribe({
-              next: (_) => {
-                let stashIndex =
-                  this.blocs.findIndex((b) => b.id == stash_bloc.id) || -1;
-                if (stashIndex > -1) {
-                  this.blocs.splice(stashIndex, 1);
-                }
-              },
-            });
-          },
-        });
-      }
+    modal.onClose.subscribe({
+      next: (bloc: Bloc | null) => {
+        if (bloc)
+          this.apiService.postBloc(bloc).subscribe({
+            next: (_) => {
+              this.utilsService.toast(
+                'success',
+                'Success',
+                'Bloc added to planning',
+              );
+              this.apiService.deleteStash(stash_bloc.id!).subscribe({
+                next: (_) => {
+                  let stashIndex =
+                    this.blocs.findIndex((b) => b.id == stash_bloc.id) || -1;
+                  if (stashIndex > -1) {
+                    this.blocs.splice(stashIndex, 1);
+                  }
+                },
+              });
+            },
+          });
+      },
     });
   }
 
@@ -82,12 +83,13 @@ export class StashComponent {
       data: `Remove every blocs ?`,
     });
 
-    modal.onClose.subscribe((bool) => {
-      if (bool) {
-        this.apiService.removeAllStash().subscribe((_) => {
-          this.blocs = [];
-        });
-      }
+    modal.onClose.subscribe({
+      next: (bool) => {
+        if (bool)
+          this.apiService.removeAllStash().subscribe({
+            next: (_) => (this.blocs = []),
+          });
+      },
     });
   }
 

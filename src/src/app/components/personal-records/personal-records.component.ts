@@ -130,13 +130,17 @@ export class PersonalRecordsComponent implements OnDestroy {
       },
     );
 
-    modal.onClose.subscribe((pr: PR | null) => {
-      if (pr) {
-        this.apiService.postPR(pr).subscribe((PR) => {
-          this.records.push(this.parseRecord(PR));
-          this.searchInput.setValue(this.searchInput.value); // Trigger displayedRecords filtering
-        });
-      }
+    modal.onClose.subscribe({
+      next: (pr: PR | null) => {
+        if (pr) {
+          this.apiService.postPR(pr).subscribe({
+            next: (PR) => {
+              this.records.push(this.parseRecord(PR));
+              this.searchInput.setValue(this.searchInput.value); // Trigger displayedRecords filtering
+            },
+          });
+        }
+      },
     });
   }
 
@@ -159,21 +163,23 @@ export class PersonalRecordsComponent implements OnDestroy {
       },
     );
 
-    modal.onClose.subscribe((remove: boolean | null) => {
-      if (remove === true) {
-        // True is returned if the delete is done
-        this.records.splice(
-          this.records.findIndex((record) => record.id == pr.id),
-          1,
-        );
-        this.searchInput.setValue(this.searchInput.value);
-        return;
-      }
+    modal.onClose.subscribe({
+      next: (remove: boolean | null) => {
+        if (remove === true) {
+          // True is returned if the delete is done
+          this.records.splice(
+            this.records.findIndex((record) => record.id == pr.id),
+            1,
+          );
+          this.searchInput.setValue(this.searchInput.value);
+          return;
+        }
 
-      // Modify the Records with the shallow object in place
-      this.records[this.records.findIndex((record) => record.id == pr.id)] =
-        this.parseRecord(pr);
-      this.searchInput.setValue(this.searchInput.value);
+        // Modify the Records with the shallow object in place
+        this.records[this.records.findIndex((record) => record.id == pr.id)] =
+          this.parseRecord(pr);
+        this.searchInput.setValue(this.searchInput.value);
+      },
     });
   }
 

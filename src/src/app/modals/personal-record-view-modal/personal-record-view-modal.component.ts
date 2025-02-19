@@ -120,21 +120,23 @@ export class PersonalRecordViewModalComponent {
       },
     );
 
-    modal.onClose.subscribe((values: PRvalue[] | null) => {
-      if (values) {
-        this.apiService.postPRvalues(this.pr.id, values).subscribe({
-          next: (values) => {
-            this.pr.values.push(...values);
-            this.calculatePercentages();
-          },
-          error: (_) =>
-            this.utilsService.toast(
-              'error',
-              'Error',
-              'Error updating the value',
-            ),
-        });
-      }
+    modal.onClose.subscribe({
+      next: (values: PRvalue[] | null) => {
+        if (values) {
+          this.apiService.postPRvalues(this.pr.id, values).subscribe({
+            next: (values) => {
+              this.pr.values.push(...values);
+              this.calculatePercentages();
+            },
+            error: (_) =>
+              this.utilsService.toast(
+                'error',
+                'Error',
+                'Error updating the value',
+              ),
+          });
+        }
+      },
     });
   }
 
@@ -157,29 +159,31 @@ export class PersonalRecordViewModalComponent {
         },
       );
 
-      modal.onClose.subscribe((values: PRvalue[] | null) => {
-        // Returns a list, though always with one element as it's an edit
-        if (values) {
-          let value = values[0];
-          value.id = this.selectedRecordValue!.id;
+      modal.onClose.subscribe({
+        next: (values: PRvalue[] | null) => {
+          // Returns a list, though always with one element as it's an edit
+          if (values) {
+            let value = values[0];
+            value.id = this.selectedRecordValue!.id;
 
-          // Send the full objet as it's easier and small, not the "difference only"
-          this.apiService.putPRValue(this.pr.id, value).subscribe({
-            next: (PRValue) => {
-              let valueIndex = this.pr.values.findIndex(
-                (value) => value.id == this.selectedRecordValue!.id,
-              );
-              if (valueIndex > -1) this.pr.values![valueIndex] = PRValue;
-              this.calculatePercentages();
-            },
-            error: (_) =>
-              this.utilsService.toast(
-                'error',
-                'Error',
-                'Error updating the value',
-              ),
-          });
-        }
+            // Send the full objet as it's easier and small, not the "difference only"
+            this.apiService.putPRValue(this.pr.id, value).subscribe({
+              next: (PRValue) => {
+                let valueIndex = this.pr.values.findIndex(
+                  (value) => value.id == this.selectedRecordValue!.id,
+                );
+                if (valueIndex > -1) this.pr.values![valueIndex] = PRValue;
+                this.calculatePercentages();
+              },
+              error: (_) =>
+                this.utilsService.toast(
+                  'error',
+                  'Error',
+                  'Error updating the value',
+                ),
+            });
+          }
+        },
       });
     }
   }
