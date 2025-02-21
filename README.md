@@ -100,7 +100,7 @@ source venv/bin/activate
 # Install dependencies
 pip install .
 
-# Run the backend, port :8080
+# Run the backend, port :8000
 fastapi run fastapp:app
 ```
 
@@ -125,12 +125,15 @@ cp -r dist/wingfit/browser /var/www/html
 
 ## 📸 Demo <a name = "demo"></a>
 
+A demo is available at [Wingfit.fr](https://wingfit.fr).
+
 <div align="center">
 
 |         |         |
 |:-------:|:-------:|
-| ![](./.github/sc_planning.png) | ![](./.github/sc_programs.png) |
-| ![](./.github/sc_pr.png) | ![](./.github/sc_blocs.png) |
+| ![](./.github/sc_planning.png) | ![](./.github/sc_blocs.png) |
+| ![](./.github/sc_pr.png) | ![](./.github/sc_statistics.png) |
+| ![](./.github/sc_programs.png) | ![](./.github/sc_program.png) |
 
 </div>
 
@@ -138,7 +141,9 @@ cp -r dist/wingfit/browser /var/www/html
 
 ## 🚧 Roadmap <a name = "roadmap"></a>
 
-New features coming soon<sup>TM</sup>, check out the development plan in the [Roadmap Wiki](https://github.com/itskovacs/wingfit/wiki/Roadmap).
+New features coming soon<sup>TM</sup>, check out the development plan in the [Roadmap Wiki](https://github.com/itskovacs/wingfit/wiki/Roadmap). If you have ideas 💡, feel free to open an issue.
+
+If you want to develop new feature, feel free to open a pull request (see [🤝 Contributing](#contributing)).
 
 <br>
 
