@@ -1,8 +1,10 @@
 import base64
 import random
 import re
+import httpx
 from datetime import date
 from io import BytesIO
+import tempfile
 from pathlib import Path
 from uuid import uuid4
 
@@ -53,6 +55,23 @@ def parse_str_or_date_to_date(cdate: str | date) -> date:
                 status_code=400, detail="Invalid date format, use YYYY-MM-DD"
             )
     return cdate
+
+
+async def download_file(link: str) -> str:
+    try:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.get(link)
+            response.raise_for_status()
+            
+            temp_file = tempfile.NamedTemporaryFile(delete=False)
+            temp_file.write(response.content)
+            temp_file.close()
+            
+            return temp_file.name
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=400, detail=f"Failed to download file: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error during file download: {e}")
 
 
 def check_update():

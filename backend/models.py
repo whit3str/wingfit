@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 1440
+    OPENAI_API_KEY: str = ""
 
     class Config:
         env_file = "storage/config.yml"
@@ -158,8 +159,6 @@ class Bloc(BlocBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     cdate: date = Field(default_factory=lambda: datetime.utcnow().date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
-    # TODO: Programmation icon brand_id: int | None = Field(default=None, foreign_key="blocbrand.id")
-
     result_id: int | None = Field(default=None, foreign_key="blocresult.id")
     result: BlocResult | None = Relationship(back_populates="bloc")
 
@@ -168,14 +167,12 @@ class Bloc(BlocBase, table=True):
 
 
 class BlocCreate(BlocBase):
-    # TODO: Programmation icon
     category: BlocCategoryRead | None = None
     category_id: int | None = None
     cdate: str | date = Field(default_factory=lambda: datetime.utcnow().date())
 
 
 class BlocUpdate(BlocBase):
-    # TODO: Programmation icon
     content: str | None = None
     category: BlocCategoryRead | None = None
     category_id: int | None = None
@@ -446,26 +443,56 @@ class ProgramStepBlocRead(ProgramStepBlocBase):
         )
 
 
-class TemplateBase(SQLModel):
-    content: str
-    duration: int | None = None
-
-
-class Template(TemplateBase, table=True):
+class HealthWatchData(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    category_id: int = Field(foreign_key="bloccategory.id")
+    cdate: date = Field(index=True)
     user: str = Field(foreign_key="user.username")
+    recovery: int
+    resting_hr: int
+    hrv: int
+    temperature: float
+    oxy_level: float
+    strain: float
+    sleep_score: int
+    sleep_duration_light: int
+    sleep_duration_deep: int
+    sleep_duration_rem: int
+    sleep_duration_awake: int
+    sleep_efficiency: int
 
-
-class TemplateRead(TemplateBase):
+class HealthWatchDataRead(SQLModel):
     id: int
-    category_id: int
-
+    cdate: date
+    recovery: int
+    resting_hr: int
+    hrv: int
+    temperature: float
+    oxy_level: float
+    strain: float
+    sleep_score: int
+    sleep_duration_light: int
+    sleep_duration_deep: int
+    sleep_duration_rem: int
+    sleep_duration_awake: int
+    sleep_efficiency: int
+    sleep_duration_total: int # Injected, computed
+    
     @classmethod
-    def serialize(cls, obj: Template) -> "TemplateRead":
+    def serialize(cls, obj: HealthWatchData) -> "HealthWatchDataRead":
         return cls(
             id=obj.id,
-            content=obj.content,
-            duration=obj.duration,
-            category_id=obj.category_id,
+            cdate=obj.cdate,
+            recovery=obj.recovery,
+            resting_hr=obj.resting_hr,
+            hrv=obj.hrv,
+            temperature=obj.temperature,
+            oxy_level=obj.oxy_level,
+            strain=obj.strain,
+            sleep_score=obj.sleep_score,
+            sleep_duration_light=obj.sleep_duration_light,
+            sleep_duration_deep=obj.sleep_duration_deep,
+            sleep_duration_rem=obj.sleep_duration_rem,
+            sleep_duration_awake=obj.sleep_duration_awake,
+            sleep_duration_total=obj.sleep_duration_light+obj.sleep_duration_deep+obj.sleep_duration_rem+obj.sleep_duration_awake,
+            sleep_efficiency=obj.sleep_efficiency,
         )

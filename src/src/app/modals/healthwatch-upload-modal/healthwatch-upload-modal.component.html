@@ -1,0 +1,36 @@
+<p-tabs value="whoop">
+    <p-tablist>
+        <p-tab value="whoop">Whoop</p-tab>
+    </p-tablist>
+    <p-tabpanels>
+        <p-tabpanel value="whoop">
+            <div class="mt-4 w-full grid">
+                <div class="p-4 mx-auto max-w-screen-xl">
+                    <div class="max-w-screen-md text-center">
+                        <h2 class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900">
+                            Archive
+                        </h2>
+                        <div class="p-2 mt-4">
+                            <p-button icon="pi pi-upload" label="Upload archive" (click)="fileUpload.click()" text
+                                severity="secondary" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-4 mx-auto max-w-screen-xl">
+                    <div class="max-w-screen-md text-center">
+                        <h2 class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900">
+                            Export Link
+                        </h2>
+                        <div class="p-2 mt-4">
+                            <input type="text" pInputText [formControl]="linkInput" placeholder="Whoop URL" />
+                            <p-button label="Confirm" [disabled]="!linkInput.value" (click)="linkConfirm()" text />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </p-tabpanel>
+    </p-tabpanels>
+</p-tabs>
+
+<input type="file" class="file-input" style="display: none" (change)="onUploadFileSelected($event)" #fileUpload />

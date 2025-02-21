@@ -7,6 +7,12 @@ import { PR, PRvalue } from '../types/personal-record';
 import { Program, ProgramBloc, ProgramStep } from '../types/program';
 import { User } from '../types/user';
 import { Info } from '../types/info';
+import {
+  BlocsByCategory,
+  WeeklyDuration,
+  HealthWatchData,
+  WeeklyDurationTotal,
+} from '../types/stats';
 
 @Injectable({
   providedIn: 'root',
@@ -198,10 +204,7 @@ export class ApiService {
   }
 
   // Bloc result endpoints
-  putBlocResult(
-    bloc_id: number,
-    result: Partial<BlocResult>,
-  ): Observable<BlocResult> {
+  putBlocResult(bloc_id: number, result: BlocResult): Observable<BlocResult> {
     return this.httpClient.put<BlocResult>(
       this.apiBaseUrl + `/blocs/${bloc_id}/result`,
       result,
@@ -310,8 +313,8 @@ export class ApiService {
     );
   }
 
-  deleteProgram(program_id: number): Observable<Program> {
-    return this.httpClient.delete<Program>(
+  deleteProgram(program_id: number): Observable<{}> {
+    return this.httpClient.delete<{}>(
       this.apiBaseUrl + `/programs/${program_id}`,
     );
   }
@@ -384,6 +387,56 @@ export class ApiService {
     return this.httpClient.delete<{}>(
       this.apiBaseUrl +
         `/programs/${program_id}/steps/${step_id}/blocs/${bloc_id}`,
+    );
+  }
+
+  // Stats endpoints
+  getBlocsByCategory(year: number): Observable<BlocsByCategory[]> {
+    let params = new HttpParams();
+    params = params.set('year', year);
+
+    return this.httpClient.get<BlocsByCategory[]>(
+      this.apiBaseUrl + '/stats/blocs_by_category',
+      { params },
+    );
+  }
+
+  getWeeklyDurationTotal(year: number): Observable<WeeklyDurationTotal[]> {
+    let params = new HttpParams();
+    params = params.set('year', year);
+
+    return this.httpClient.get<WeeklyDurationTotal[]>(
+      this.apiBaseUrl + '/stats/week_duration_total',
+      { params },
+    );
+  }
+
+  getWeeklyDuration(year: number): Observable<WeeklyDuration[]> {
+    let params = new HttpParams();
+    params = params.set('year', year);
+
+    return this.httpClient.get<WeeklyDuration[]>(
+      this.apiBaseUrl + '/stats/week_duration',
+      { params },
+    );
+  }
+
+  getHealthWatchData(year: number): Observable<HealthWatchData[]> {
+    let params = new HttpParams();
+    params = params.set('year', year);
+
+    return this.httpClient.get<HealthWatchData[]>(
+      this.apiBaseUrl + '/stats/healthwatch',
+      { params },
+    );
+  }
+
+  postWhoopData(data: FormData): Observable<{ count: number }> {
+    // data is either a link:str or file: File
+    return this.httpClient.post<{ count: number }>(
+      this.apiBaseUrl + '/stats/whoop_archive',
+      data,
+      { headers: { enctype: 'multipart/form-data' } },
     );
   }
 }

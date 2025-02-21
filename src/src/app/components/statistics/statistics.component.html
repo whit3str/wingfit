@@ -1,1 +1,200 @@
-<app-coming-soon></app-coming-soon>
+<section class="md:px-8 mx-auto fixed-toolbar-on-scroll bg-slate-50">
+    <p-toolbar [style]="{ border: '0' }" [styleClass]="'bg-slate-50'">
+        <ng-template #start></ng-template>
+
+        <ng-template #center>
+            <div class="flex items-center gap-2">
+                <p-button (click)="previousYear()" icon="pi pi-angle-left" text severity="secondary" />
+                <span class="text-2xl font-semibold py-2">{{ year }}</span>
+                <p-button (click)="nextYear()" icon="pi pi-angle-right" text severity="secondary" />
+            </div>
+        </ng-template>
+
+        <ng-template #end>
+            <p-button text (click)="healthWatchUpload()" severity="secondary"><i
+                    class="material-symbols-outlined">watch_screentime</i></p-button>
+        </ng-template>
+    </p-toolbar>
+</section>
+
+<div class="max-w-screen-2xl mx-auto flex flex-col md:flex-row gap-4 px-4 m-4 md:h-[215px]">
+    <div class="grid md:grid-cols-3 gap-4 md:w-3/4">
+        <p-card styleClass="h-full">
+            <div class="flex justify-between items-center mt-4">
+                <div>
+                    <span class="text-lg font-semibold">Workouts duration</span>
+                </div>
+                <div>
+                    @defer {
+                    <span class="text-4xl font-semibold text-slate-700">{{ totalWorkoutsHours ? (totalWorkoutsHours |
+                        minsToHour:false:true) : '-'
+                        }}</span>
+                    <span class="text-slate-700 text-sm">h</span>
+                    } @placeholder (minimum 0.5s) {
+                    <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
+                    }
+                </div>
+            </div>
+        </p-card>
+        <p-card styleClass="h-full">
+            <div class="flex justify-between items-center mt-4">
+                <div>
+                    <span class="text-lg font-semibold">Workouts</span>
+                </div>
+                <div>
+                    @defer {
+                    <span class="text-4xl font-semibold text-SLATE-700">{{ totalBlocs || '-' }}</span>
+                    } @placeholder (minimum 0.5s) {
+                    <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
+                    }
+                </div>
+            </div>
+        </p-card>
+        <p-card styleClass="h-full">
+            <div class="flex justify-between items-center mt-4">
+                <div>
+                    <span class="text-lg font-semibold">Avg. Strain</span>
+                </div>
+                <div>
+                    @defer {
+                    <span class="text-4xl font-semibold text-blue-500">{{ averageStrain || '-' }}</span>
+                    } @placeholder (minimum 0.5s) {
+                    <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
+                    }
+                </div>
+            </div>
+        </p-card>
+        <p-card styleClass="h-full">
+            <div class="flex justify-between items-center mt-4">
+                <div>
+                    <span class="text-lg font-semibold">Avg. Sleep Duration</span>
+                </div>
+                <div>
+                    @defer {
+                    <span class="text-4xl font-semibold" [class.text-red-700]="averageSleepDuration < 480"
+                        [class.text-green-700]="averageSleepDuration >= 480">
+                        {{ averageSleepDuration ? (averageSleepDuration | minsToHour:false) : '-' }}</span>
+                    } @placeholder (minimum 0.5s) {
+                    <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
+                    }
+                </div>
+            </div>
+        </p-card>
+        <p-card styleClass="h-full">
+            <div class="flex justify-between items-center mt-4">
+                <div>
+                    <span class="text-lg font-semibold">Avg. Resting HR</span>
+                </div>
+                <div>
+                    @defer {
+                    <span class="text-4xl font-semibold text-green-700">{{ averageRestingHR || '-' }}</span>
+                    <span class="text-gray-700 text-sm">bpm</span>
+                    } @placeholder (minimum 0.5s) {
+                    <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
+                    }
+                </div>
+            </div>
+        </p-card>
+        <p-card styleClass="h-full">
+            <div class="flex justify-between items-center mt-4">
+                <div>
+                    <span class="text-lg font-semibold">Avg. HR Variability</span>
+                </div>
+                <div>
+                    @defer {
+                    <span class="text-4xl font-semibold" [class.text-red-700]="averageHRV < 50"
+                        [class.text-amber-700]="averageHRV >= 50 && averageHRV < 80"
+                        [class.text-green-700]="averageHRV >= 80">{{ averageHRV || '-' }}</span>
+                    <span class="text-gray-700 text-sm">ms</span>
+                    } @placeholder (minimum 0.5s) {
+                    <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
+                    }
+                </div>
+            </div>
+        </p-card>
+    </div>
+
+    <div class="md:w-1/4 flex items-center justify-center bg-white shadow rounded-lg">
+        @defer {
+        @if (blocsByCategory.labels.length) {
+        <p-chart type="pie" [data]="blocsByCategory" [options]="pieGraphOptions" height="160px" class="p-4" />
+        } @else {
+        <div class="flex justify-center mt-4">
+            <div class="p-4">
+                <h2 class="mb-0 text-2xl tracking-tight font-semibold text-gray-900">
+                    Nothing to see yet
+                </h2>
+                <p class="mt-4 font-light text-center text-gray-500">
+                    {{ year }} has no workouts
+                </p>
+            </div>
+        </div>
+        }
+        } @placeholder (minimum 0.7s) {
+        <p-skeleton height="160px" class="w-full p-4"></p-skeleton>
+        }
+
+    </div>
+</div>
+
+<div class="max-w-screen-2xl mx-auto px-4 m-4">
+    <p-card>
+        <div class="p-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-900 mb-0">Weekly workouts duration</h1>
+            </div>
+
+            <div class="mt-4">
+                @defer {
+                @if (categoryDurationPerWeek.labels.length) {
+                <p-chart type="bar" [data]="categoryDurationPerWeek" [options]="stackedGraphOptions" />
+                } @else {
+                <div class="flex justify-center mt-4">
+                    <div class="p-4">
+                        <h2 class="mb-0 text-2xl tracking-tight font-semibold text-gray-900">
+                            Nothing to see yet
+                        </h2>
+                        <p class="mt-4 font-light text-center text-gray-500">
+                            {{ year }} has no workouts
+                        </p>
+                    </div>
+                </div>
+                }
+                } @placeholder (minimum 0.7s) {
+                <p-skeleton height="20rem"></p-skeleton>
+                }
+            </div>
+        </div>
+    </p-card>
+</div>
+
+<div class="max-w-screen-2xl mx-auto px-4 m-4">
+    <p-card>
+        <div class="p-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-900 mb-0">Whoop Strain / Recovery</h1>
+            </div>
+
+            <div class="mt-4">
+                @defer {
+                @if (strainRecoveryComboGraph.labels.length) {
+                <p-chart type="line" [data]="strainRecoveryComboGraph" [options]="comboGraphOptions" />
+                } @else {
+                <div class="flex justify-center mt-4">
+                    <div class="p-4">
+                        <h2 class="mb-0 text-2xl tracking-tight font-semibold text-gray-900">
+                            Nothing to see yet
+                        </h2>
+                        <p class="mt-4 font-light text-center text-gray-500">
+                            {{ year }} has no Whoop data
+                        </p>
+                    </div>
+                </div>
+                }
+                } @placeholder (minimum 0.7s) {
+                <p-skeleton height="20rem"></p-skeleton>
+                }
+            </div>
+        </div>
+    </p-card>
+</div>

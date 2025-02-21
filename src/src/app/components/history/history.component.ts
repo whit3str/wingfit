@@ -75,24 +75,26 @@ export class HistoryComponent {
       data: { ...bloc },
     });
 
-    modal.onClose.subscribe((date: Date | null) => {
-      if (date) {
-        // Override result in case it was defined previously
-        this.apiService
-          .postBloc({
-            ...bloc,
-            result: undefined,
-            cdate: this.utilsService.Iso8601ToStr(date),
-          })
-          .subscribe({
-            next: (_) =>
-              this.utilsService.toast(
-                'success',
-                'Success',
-                'Bloc added to planning',
-              ),
-          });
-      }
+    modal.onClose.subscribe({
+      next: (date: Date | null) => {
+        if (date) {
+          // Override result in case it was defined previously
+          this.apiService
+            .postBloc({
+              ...bloc,
+              result: undefined,
+              cdate: this.utilsService.Iso8601ToStr(date),
+            })
+            .subscribe({
+              next: (_) =>
+                this.utilsService.toast(
+                  'success',
+                  'Success',
+                  'Bloc added to planning',
+                ),
+            });
+        }
+      },
     });
   }
 }

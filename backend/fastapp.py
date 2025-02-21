@@ -1,5 +1,9 @@
 import base64
+import csv
 import json
+import shutil
+import tempfile
+import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Literal
@@ -12,19 +16,21 @@ from fastapi import (
     Depends,
     FastAPI,
     File,
+    Form,
     Header,
     HTTPException,
     Request,
     Response,
     UploadFile,
 )
-from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql import extract
 from sqlmodel import (
     Field,
     Relationship,
@@ -32,6 +38,7 @@ from sqlmodel import (
     SQLModel,
     create_engine,
     delete,
+    func,
     select,
 )
 
@@ -41,6 +48,7 @@ from .utils import (
     assets_folder_path,
     b64_decode,
     check_update,
+    download_file,
     generate_api_token,
     generate_filename,
     parse_str_or_date_to_date,
@@ -208,7 +216,7 @@ def info():
 
 
 @app.get("/api/stash", response_model=list[StashRead])
-def read_stash(
+def get_stash(
     session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]
 ) -> list[StashRead]:
     stash = session.exec(select(Stash).filter(Stash.user == current_user))
@@ -216,7 +224,7 @@ def read_stash(
 
 
 @app.post("/api/stash")
-def create_stash(
+def post_stash(
     stash_data: StashBase,
     session: SessionDep,
     X_Api_Token: Annotated[str | None, Header()] = None,
@@ -253,7 +261,7 @@ def delete_stash(
 
 
 @app.get("/api/categories", response_model=list[BlocCategoryRead])
-def read_categories(
+def get_categories(
     session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]
 ) -> list[BlocCategoryRead]:
     categories = session.exec(
@@ -263,7 +271,7 @@ def read_categories(
 
 
 @app.post("/api/categories", response_model=BlocCategoryRead)
-def create_category(
+def post_category(
     category: BlocCategoryBase,
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_user)],
@@ -281,7 +289,7 @@ def create_category(
 
 
 @app.put("/api/categories/{category_id}", response_model=BlocCategoryRead)
-def update_category(
+def put_category(
     session: SessionDep,
     category_id: int,
     category: BlocCategoryBase,
@@ -309,7 +317,7 @@ def delete_category(
     db_category = session.get(BlocCategory, category_id)
     verify_exists_and_owns(current_user, db_category)
 
-    if read_category_blocs_cnt(session, category_id, current_user) > 0:
+    if get_category_blocs_cnt(session, category_id, current_user) > 0:
         raise HTTPException(status_code=409, detail="Category in use")
 
     session.delete(db_category)
@@ -318,7 +326,7 @@ def delete_category(
 
 
 @app.get("/api/categories/{category_id}/count")
-def read_category_blocs_cnt(
+def get_category_blocs_cnt(
     session: SessionDep,
     category_id: int,
     current_user: Annotated[str, Depends(get_current_user)],
@@ -328,68 +336,8 @@ def read_category_blocs_cnt(
     return len(db_category.blocs) + len(db_category.programblocs)
 
 
-@app.get("/api/templates", response_model=list[TemplateRead])
-def read_templates(
-    session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]
-) -> list[TemplateRead]:
-    templates = session.exec(select(Template).filter(Template.user == current_user))
-    return [TemplateRead.serialize(template) for template in templates]
-
-
-@app.post("/api/templates", response_model=TemplateRead)
-def create_template(
-    template_data: Template,
-    session: SessionDep,
-    current_user: Annotated[str, Depends(get_current_user)],
-) -> TemplateRead:
-    new_template = Template(
-        content=template_data.content,
-        duration=template_data.duration,
-        category_id=template_data.category_id,
-        user=current_user,
-    )
-    session.add(new_template)
-    session.commit()
-    session.refresh(new_template)
-    return TemplateRead.serialize(new_template)
-
-
-@app.put("/api/templates/{template_id}", response_model=TemplateRead)
-def update_template(
-    session: SessionDep,
-    template_id: int,
-    template: TemplateBase,
-    current_user: Annotated[str, Depends(get_current_user)],
-) -> TemplateRead:
-    db_template = session.get(Template, template_id)
-    verify_exists_and_owns(current_user, db_template)
-
-    template_data = template.model_dump(exclude_unset=True)
-    for key, value in template_data.items():
-        setattr(db_template, key, value)
-
-    session.add(db_template)
-    session.commit()
-    session.refresh(db_template)
-    return TemplateRead.serialize(db_template)
-
-
-@app.delete("/api/templates/{template_id}")
-def delete_template(
-    session: SessionDep,
-    template_id: int,
-    current_user: Annotated[str, Depends(get_current_user)],
-) -> dict:
-    db_template = session.get(Template, template_id)
-    verify_exists_and_owns(current_user, db_template)
-
-    session.delete(db_template)
-    session.commit()
-    return {}
-
-
 @app.get("/api/blocs", response_model=list[BlocRead])
-def read_blocs(
+def get_blocs(
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_user)],
     startdate: str | None = None,
@@ -424,7 +372,7 @@ def read_blocs(
 
 
 @app.post("/api/blocs", response_model=BlocRead | list[BlocRead])
-def create_bloc(
+def post_bloc(
     bloc_data: BlocCreate | list[BlocCreate],
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_user)],
@@ -463,7 +411,7 @@ def create_bloc(
 
 
 @app.put("/api/blocs/{bloc_id}", response_model=BlocRead)
-def update_bloc(
+def put_bloc(
     session: SessionDep,
     bloc_id: int,
     bloc: BlocUpdate,
@@ -506,7 +454,7 @@ def delete_bloc(
 
 
 @app.put("/api/blocs/{bloc_id}/result", response_model=BlocResultRead)
-def update_bloc_result(
+def put_bloc_result(
     bloc_id: int,
     result: BlocResultBase,
     session: SessionDep,
@@ -545,7 +493,7 @@ def delete_bloc_result(
 
 
 @app.get("/api/pr", response_model=list[PRRead])
-def read_prs(
+def get_prs(
     session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]
 ) -> list[PRRead]:
     prs = session.exec(
@@ -555,7 +503,7 @@ def read_prs(
 
 
 @app.post("/api/pr", response_model=PRRead)
-def create_pr(
+def post_pr(
     pr_data: PRCreate,
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_user)],
@@ -602,7 +550,7 @@ def create_pr(
 
 
 @app.put("/api/pr/{pr_id}", response_model=PRRead)
-def update_pr(
+def put_pr(
     pr_id: int,
     pr_data: PRUpdate,
     session: SessionDep,
@@ -643,7 +591,7 @@ def delete_pr(
 
 
 @app.post("/api/pr/{pr_id}/values", response_model=list[PRValueRead])
-def create_pr_value(
+def post_pr_value(
     pr_id: int,
     value_data: PRValueCreateOrUpdate | list[PRValueCreateOrUpdate],
     session: SessionDep,
@@ -691,7 +639,7 @@ def create_pr_value(
 
 
 @app.put("/api/pr/{pr_id}/value/{value_id}", response_model=PRValueRead)
-def update_pr_value(
+def put_pr_value(
     pr_id: int,
     value_id: int,
     value_data: PRValueCreateOrUpdate,
@@ -885,7 +833,7 @@ def export_program(
 
 
 @app.get("/api/programs", response_model=list[ProgramRead])
-def read_programs(
+def get_programs(
     session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]
 ) -> list[ProgramRead]:
     programs = session.exec(select(Program).filter(Program.user == current_user))
@@ -893,7 +841,7 @@ def read_programs(
 
 
 @app.post("/api/programs", response_model=ProgramRead)
-def create_program(
+def post_program(
     program_data: ProgramCreate,
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_user)],
@@ -936,7 +884,7 @@ def create_program(
 
 
 @app.put("/api/programs/{program_id}", response_model=ProgramRead)
-def update_program(
+def put_program(
     program_id: int,
     program: ProgramUpdate,
     session: SessionDep,
@@ -1031,7 +979,7 @@ def delete_program(
 
 
 @app.get("/api/programs/{program_id}", response_model=ProgramReadComplete)
-def read_program(
+def get_program(
     program_id: int,
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_user)],
@@ -1042,7 +990,7 @@ def read_program(
 
 
 @app.get("/api/programs/{program_id}/steps", response_model=list[ProgramStepWithBlocsRead])
-def read_program_steps(
+def get_program_steps(
     program_id: int,
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_user)],
@@ -1056,7 +1004,7 @@ def read_program_steps(
 
 
 @app.post("/api/programs/{program_id}/steps", response_model=ProgramStepRead)
-def create_program_step(
+def post_program_step(
     program_id: int,
     step_data: ProgramStepCreate,
     session: SessionDep,
@@ -1078,7 +1026,7 @@ def create_program_step(
 
 
 @app.put("/api/programs/{program_id}/steps/{step_id}", response_model=ProgramStepRead)
-def update_program_step(
+def put_program_step(
     program_id: int,
     step_id: int,
     step_data: ProgramStepUpdate,
@@ -1130,7 +1078,7 @@ def delete_program_step(
 
 
 @app.post("/api/programs/{program_id}/steps/{step_id}/blocs", response_model=ProgramStepBlocRead)
-def create_program_step_bloc(
+def post_program_step_bloc(
     program_id: int,
     step_id: int,
     bloc_data: ProgramStepBlocCreate,
@@ -1175,7 +1123,7 @@ def create_program_step_bloc(
 @app.put("/api/programs/{program_id}/steps/{step_id}/blocs/{bloc_id}",
     response_model=ProgramStepBlocRead,
 )
-def update_program_step_bloc(
+def put_program_step_bloc(
     program_id: int,
     step_id: int,
     bloc_id: int,
@@ -1302,7 +1250,7 @@ def refresh_token(refresh_token: str = Body(..., embed=True)):
 
 
 @app.get("/api/settings", response_model=UserRead)
-def read_user_settings(
+def get_user_settings(
     session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]
 ) -> UserRead:
     user = session.get(User, current_user)
@@ -1317,7 +1265,7 @@ def export_user_data(
         "_": {
             "at": datetime.timestamp(datetime.now()),
         },
-        "categories": read_categories(session, current_user),
+        "categories": get_categories(session, current_user),
         "blocs": [
             BlocRead.serialize(bloc)
             for bloc in session.exec(select(Bloc).filter(Bloc.user == current_user))
@@ -1375,5 +1323,174 @@ def delete_user_api_token(
     session.commit()
     session.refresh(db_user)
     return {}
+
+@app.get("/api/stats/blocs_by_category")
+def get_blocs_count_by_category(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)], year: str | int | None = None) -> list:
+    year = int(year) if year else datetime.now().year
+
+    query = (
+        select(BlocCategory.id, BlocCategory.name, BlocCategory.color, func.count(Bloc.id).label("blocs"))
+        .join(Bloc, Bloc.category_id == BlocCategory.id)
+        .where(Bloc.user == current_user)
+        .where(extract("year", Bloc.cdate) == year)
+        .group_by(BlocCategory.id)
+    )
+
+    result = session.exec(query).all()
+    return [{"id": c.id, "name": c.name.upper(), "color": c.color, "count": c.blocs} for c in result]
+
+
+@app.get("/api/stats/week_duration_total")
+def get_total_duration_per_week(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)], year: str | int | None = None) -> list:
+    year = int(year) if year else datetime.now().year
+
+    query = (
+        select(
+            extract("week", Bloc.cdate).label("week"),
+            extract("year", Bloc.cdate).label("year"),
+            func.sum(Bloc.duration).label("duration")
+        )
+        .where(Bloc.user == current_user)
+        .where(Bloc.duration.isnot(None))
+        .where(extract("year", Bloc.cdate) == year)
+        .group_by("year", "week")
+    )
+
+    results = session.exec(query).all()
+    return [
+        {"week": r.week, "duration": r.duration}
+        for r in results
+    ]
+
+
+@app.get("/api/stats/week_duration")
+def get_category_duration_per_week(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)], year: str | int | None = None) -> list:
+    year = int(year) if year else datetime.now().year
+
+    query = (
+        select(
+            extract("week", Bloc.cdate).label("week"),
+            extract("year", Bloc.cdate).label("year"),
+            BlocCategory.name.label("category"),
+            func.sum(Bloc.duration).label("duration"),
+            BlocCategory.color.label("color"),
+            BlocCategory.weight.label("weight"),
+        )
+        .join(BlocCategory, Bloc.category_id == BlocCategory.id)
+        .where(Bloc.user == current_user)
+        .where(Bloc.duration.isnot(None))
+        .where(extract("year", Bloc.cdate) == year)
+        .group_by("year", "week", "category")
+    )
+
+    results = session.exec(query).all()
+
+    category_data = {}
+
+    for r in results:
+        category_data.setdefault(r.category, {
+            "color": r.color,
+            "order": r.weight,
+            "data": {w: 0 for w in range(0, 52)}
+        })
+
+        category_data[r.category]["data"][r.week] = r.duration
+
+
+    datasets = [
+        {
+            "label": category.upper(),
+            "order": category_data[category]["order"],
+            "backgroundColor": category_data[category]["color"],
+            "data": [category_data[category]["data"][week] for week in range(0, 52)]
+        }
+        for category in category_data
+    ]
+
+    return datasets
+
+
+@app.get("/api/stats/healthwatch", response_model=list[HealthWatchDataRead])
+def get_hw_data(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)], year: str | int | None = None) -> list[HealthWatchDataRead]:
+    year = int(year) if year else datetime.now().year
+
+    query = (
+        select(HealthWatchData)
+        .where(HealthWatchData.user == current_user)
+        .where(extract("year", HealthWatchData.cdate) == year)
+        .order_by(HealthWatchData.cdate.desc())
+    )
+
+    results = session.exec(query).all()
+    return [HealthWatchDataRead.serialize(r) for r in results]
+
+
+@app.post("/api/stats/whoop_archive")
+async def post_whoop_archive(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)], file: UploadFile | None = File(None), link: str | None = Form(None)):
+    if not file and not link:
+        raise HTTPException(status_code=400, detail="You must provide either a file or a link")
+
+    if link and not link.startswith('https://links.prod.whoop.com/'):
+        raise HTTPException(status_code=400, detail="Whoop export URL looks incorrect")
+
+    if file and (not file.filename or not file.filename.startswith('my_whoop_data_')):
+        raise HTTPException(status_code=400, detail="Whoop export archive starts with 'my_whoop_data_', ensure you are uploading the correct archive")
+
+    temporary_fp = ""
+    if file:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            shutil.copyfileobj(file.file, temp_file)
+            temporary_fp = temp_file.name
+
+    else:
+        temporary_fp = await download_file(link)
+
+    inserted = 0
+    with zipfile.ZipFile(temporary_fp, 'r') as whoop_archive:
+        if 'physiological_cycles.csv' not in whoop_archive.namelist():
+            raise HTTPException(status_code=400, detail="Invalid archive: 'physiological_cycles.csv' is missing.")
+
+        with whoop_archive.open('physiological_cycles.csv') as file:
+            reader = csv.reader((line.decode('utf-8') for line in file), delimiter=',')
+            next(reader)
+
+            existing_dates = {date for date
+                in session.exec(select(HealthWatchData.cdate).where(HealthWatchData.user == current_user)).all()
+            }
+
+            for row in reader:
+                if not row or not row[3] or not row[8]:  # Recovery or strain missing indicates the row is incomplete
+                    continue
+
+                date_value = parse_str_or_date_to_date(row[0].split(" ")[0])
+                if date_value in existing_dates:
+                    # The archive contains all data, so it will contain previously ingested
+                    # Maybe we could update the db object
+                    continue
+
+                new_whoop_data = HealthWatchData(
+                    cdate = date_value,
+                    user = current_user,
+                    recovery = row[3],
+                    strain = row[8],
+                    resting_hr = row[4],
+                    hrv = row[5],
+                    temperature = row[6],
+                    oxy_level = row[7],
+                    sleep_score = row[14],
+                    sleep_duration_light = row[18],
+                    sleep_duration_deep = row[19],
+                    sleep_duration_rem = row[20],
+                    sleep_duration_awake = row[21],
+                    sleep_efficiency = row[24],
+                )
+                session.add(new_whoop_data)
+
+        inserted = len(session.new)
+        session.commit()
+    pathlib.Path(temporary_fp).unlink()
+
+    return {"count": inserted}
+
 
 app.mount("/", StaticFiles(directory=settings.FRONTEND_FOLDER, html=True), name="frontend")

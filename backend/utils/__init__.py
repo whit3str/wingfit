@@ -6,5 +6,6 @@ from .utils import (
     generate_filename,
     parse_str_or_date_to_date,
     remove_image,
+    download_file,
     save_image,
 )
