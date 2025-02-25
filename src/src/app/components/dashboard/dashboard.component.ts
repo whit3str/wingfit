@@ -210,6 +210,14 @@ export class DashboardComponent {
             this.displayedBlocs[bloc.cdate].push(bloc);
             this.displayedBlocsDuration[bloc.cdate] += bloc.duration || 0;
           });
+
+          // Calculate displayedBlocsDuration from displayedBlocs, as the previous Bloc's date would have its duration
+          Object.keys(this.displayedBlocs).forEach((weekdate) => {
+            this.displayedBlocsDuration[weekdate] = this.displayedBlocs[
+              weekdate
+            ].reduce((acc, bloc) => acc + (bloc.duration || 0), 0);
+          });
+
           this.sortDisplayedBlocs();
           break;
       }
@@ -765,7 +773,9 @@ export class DashboardComponent {
         .putBloc(event.item.data, {
           cdate: this.dateToStr(newDate),
         })
-        .subscribe();
+        .subscribe({
+          next: (bloc) => this.displayedBlocInteraction('move', bloc),
+        });
     }
   }
 }
