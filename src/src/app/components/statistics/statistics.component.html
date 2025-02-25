@@ -1,5 +1,5 @@
-<section class="md:px-8 mx-auto fixed-toolbar-on-scroll bg-slate-50">
-    <p-toolbar [style]="{ border: '0' }" [styleClass]="'bg-slate-50'">
+<section class="mx-auto fixed-toolbar-on-scroll">
+    <p-toolbar [style]="{ border: '0' }" [styleClass]="'md:px-8 w-full bg-slate-50 dark:bg-surface-900'">
         <ng-template #start></ng-template>
 
         <ng-template #center>
@@ -26,10 +26,11 @@
                 </div>
                 <div>
                     @defer {
-                    <span class="text-4xl font-semibold text-slate-700">{{ totalWorkoutsHours ? (totalWorkoutsHours |
+                    <span class="text-4xl font-semibold text-slate-700 dark:text-gray-200">{{ totalWorkoutsHours ?
+                        (totalWorkoutsHours |
                         minsToHour:false:true) : '-'
                         }}</span>
-                    <span class="text-slate-700 text-sm">h</span>
+                    <span class="text-slate-700 dark:text-gray-200 text-sm">h</span>
                     } @placeholder (minimum 0.5s) {
                     <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
                     }
@@ -57,7 +58,8 @@
                 </div>
                 <div>
                     @defer {
-                    <span class="text-4xl font-semibold text-blue-500">{{ averageStrain || '-' }}</span>
+                    <span class="text-4xl font-semibold text-gray-700 dark:text-gray-200"
+                        [class.!text-blue-500]="averageStrain">{{ averageStrain || '-' }}</span>
                     } @placeholder (minimum 0.5s) {
                     <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
                     }
@@ -71,8 +73,9 @@
                 </div>
                 <div>
                     @defer {
-                    <span class="text-4xl font-semibold" [class.text-red-700]="averageSleepDuration < 480"
-                        [class.text-green-700]="averageSleepDuration >= 480">
+                    <span class="text-4xl font-semibold text-gray-700 dark:text-gray-200"
+                        [class.!text-red-700]="averageSleepDuration > 0 && averageSleepDuration < 480"
+                        [class.!text-green-700]="averageSleepDuration >= 480">
                         {{ averageSleepDuration ? (averageSleepDuration | minsToHour:false) : '-' }}</span>
                     } @placeholder (minimum 0.5s) {
                     <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
@@ -87,8 +90,9 @@
                 </div>
                 <div>
                     @defer {
-                    <span class="text-4xl font-semibold text-green-700">{{ averageRestingHR || '-' }}</span>
-                    <span class="text-gray-700 text-sm">bpm</span>
+                    <span class="text-4xl font-semibold text-gray-700 dark:text-gray-200">{{ averageRestingHR || '-'
+                        }}</span>
+                    <span class="text-gray-700 dark:text-gray-200 text-sm">bpm</span>
                     } @placeholder (minimum 0.5s) {
                     <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
                     }
@@ -102,10 +106,11 @@
                 </div>
                 <div>
                     @defer {
-                    <span class="text-4xl font-semibold" [class.text-red-700]="averageHRV < 50"
-                        [class.text-amber-700]="averageHRV >= 50 && averageHRV < 80"
-                        [class.text-green-700]="averageHRV >= 80">{{ averageHRV || '-' }}</span>
-                    <span class="text-gray-700 text-sm">ms</span>
+                    <span class="text-4xl font-semibold text-gray-700 dark:text-gray-200"
+                        [class.!text-red-700]="averageHRV > 0 && averageHRV < 50"
+                        [class.!text-amber-700]="averageHRV >= 50 && averageHRV < 80"
+                        [class.!text-green-700]="averageHRV >= 80">{{ averageHRV || '-' }}</span>
+                    <span class="text-gray-700 dark:text-gray-200 text-sm">ms</span>
                     } @placeholder (minimum 0.5s) {
                     <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
                     }
@@ -114,7 +119,7 @@
         </p-card>
     </div>
 
-    <div class="md:w-1/4 flex items-center justify-center bg-white shadow rounded-lg">
+    <div class="md:w-1/4 flex items-center justify-center bg-white dark:bg-surface-900 shadow rounded-lg">
         @defer {
         @if (blocsByCategory.labels.length) {
         <p-chart type="pie" [data]="blocsByCategory" [options]="pieGraphOptions" height="160px" class="p-4" />

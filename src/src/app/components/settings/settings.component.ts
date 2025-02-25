@@ -72,6 +72,12 @@ export class SettingsComponent {
   check_update() {
     this.apiService.checkVersion().subscribe({
       next: (remote_version) => {
+        if (!remote_version)
+          this.utilsService.toast(
+            'success',
+            'Latest version',
+            "You're running the latest version of Wingfit",
+          );
         if (this.info && remote_version != this.info?.version)
           this.info.update = remote_version;
       },

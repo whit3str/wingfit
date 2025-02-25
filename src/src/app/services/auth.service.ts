@@ -11,7 +11,7 @@ export interface Token {
   access_token: string;
 }
 
-const JWT_TOKEN = 'WINGIT_AT';
+const JWT_TOKEN = 'WINGFIT_AT';
 const REFRESH_TOKEN = 'WINGFIT_RT';
 const JWT_EXPIRE = 'WINGFIT_ATT';
 const JWT_USER = 'WINGFIT_USER';

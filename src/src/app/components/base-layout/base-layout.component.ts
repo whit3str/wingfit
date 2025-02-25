@@ -5,6 +5,7 @@ import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { AuthService } from '../../services/auth.service';
 import { ButtonModule } from 'primeng/button';
+import { UtilsService } from '../../services/utils.service';
 
 @Component({
   selector: 'app-base-layout',
@@ -32,16 +33,34 @@ export class BaseLayoutComponent {
   userMenuItems: MenuItem[] | undefined;
   isMobileMenuOpen = false;
 
-  constructor(private authService: AuthService) {
+  constructor(
+    private authService: AuthService,
+    private utilsService: UtilsService,
+  ) {
     this.loggedUser = this.authService.loggedUser;
   }
 
   ngOnInit() {
+    this.constructUserMenu();
+  }
+
+  constructUserMenu() {
+    let isDarkMode = this.utilsService.isDarkMode;
+    const lightDarkItem: MenuItem = {
+      label: isDarkMode ? 'Light mode' : 'Dark mode',
+      icon: isDarkMode ? 'pi pi-sun' : 'pi pi-moon',
+      command: () => {
+        this.utilsService.toggleDarkMode();
+        this.constructUserMenu(); //Reconstruct the menu with the correct item dark/light
+      },
+    };
+
     this.userMenuItems = [
       {
         label:
           this.loggedUser.charAt(0).toUpperCase() + this.loggedUser.slice(1),
         items: [
+          lightDarkItem,
           {
             label: 'History',
             icon: 'pi pi-history',

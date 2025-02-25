@@ -1,13 +1,18 @@
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { MessageService } from 'primeng/api';
 
+const DARK = 'DARK';
 @Injectable({
   providedIn: 'root',
 })
 export class UtilsService {
   public emojiList: string[] = ['📝', '💯', '💦', '🎯', '⚡', '🚀', '⏱️'];
+  public isDarkMode: boolean = false;
 
-  constructor(private ngMessageService: MessageService) {}
+  constructor(private ngMessageService: MessageService) {
+    this.isDarkMode = !!localStorage.getItem(DARK);
+    if (this.isDarkMode) this.renderDarkMode();
+  }
 
   toGithubWingfit() {
     window.open('https://github.com/itskovacs/wingfit', '_blank');
@@ -21,6 +26,23 @@ export class UtilsService {
       detail,
       life,
     });
+  }
+
+  // Dark Mode
+  renderDarkMode() {
+    const element = document.querySelector('html');
+    element?.classList.toggle('dark');
+  }
+
+  toggleDarkMode() {
+    if (this.isDarkMode) {
+      localStorage.removeItem(DARK);
+      this.isDarkMode = false;
+    } else {
+      localStorage.setItem(DARK, '1');
+      this.isDarkMode = true;
+    }
+    this.renderDarkMode();
   }
 
   // Emoji add to input

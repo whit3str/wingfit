@@ -69,6 +69,10 @@ html {
   }
 }
 
+:root.dark .bloc-is-active {
+  border-bottom: 2px solid #e0e0e0;
+}
+
 .fixed-toolbar-on-scroll {
   z-index: 500;
   position: sticky;
@@ -96,7 +100,6 @@ html {
 }
 
 .material-symbols-outlined {
-  //Override material default large size
   font-size: 1.4rem !important;
 }
 
