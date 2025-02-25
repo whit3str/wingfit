@@ -1,14 +1,10 @@
-@import "primeicons/primeicons.css";
+@use "primeicons/primeicons.css";
+@plugin 'tailwindcss-primeui';
 
-@layer tailwind-base, primeng, tailwind-utilities;
+@layer tailwind, primeng;
 
-@layer tailwind-base {
-  @tailwind base;
-}
-
-@layer tailwind-utilities {
-  @tailwind components;
-  @tailwind utilities;
+@layer tailwind {
+  @import "tailwindcss";
 }
 
 * {

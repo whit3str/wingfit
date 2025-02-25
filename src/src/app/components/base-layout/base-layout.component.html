@@ -7,7 +7,7 @@
         class="hidden md:flex flex-wrap items-center mb-4 text-base md:mb-0 md:pl-8 md:ml-8 md:border-l md:border-gray-200">
         @for (nav of navigationItems; track $index) {
         <a class="font-medium text-center text-gray-100 w-28 select-none" [routerLink]="nav.routerLink"
-          routerLinkActive="bg-slate-100 font-semibold text-slate-800 rounded py-2 px-4">
+          routerLinkActive="bg-slate-100 font-semibold text-slate-800 rounded-sm py-2 px-4">
           {{ nav.text }}</a>
         }
       </nav>
@@ -15,7 +15,7 @@
 
     <div class="inline-flex items-center justify-end">
       <button (click)="toggleMobileMenu()"
-        class="block md:hidden mr-4 p-2 text-gray-100 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring focus:ring-gray-300">
+        class="block md:hidden mr-4 p-2 text-gray-100 rounded-lg hover:bg-gray-100 focus:outline-hidden focus:ring-3 focus:ring-gray-300">
         <span class="pi pi-bars"></span>
       </button>
 

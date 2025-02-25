@@ -22,7 +22,7 @@
   @defer {
   <p-accordion [multiple]="true">
     @for (step of program?.steps; track step.id) {
-    <p-accordion-panel [value]="step.id" class="shadow-sm rounded-lg mt-2">
+    <p-accordion-panel [value]="step.id" class="shadow-xs rounded-lg mt-2">
       <p-accordion-header>
         <ng-template #toggleicon let-active="active">
           @if (active) {
