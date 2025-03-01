@@ -1488,7 +1488,7 @@ async def post_whoop_archive(session: SessionDep, current_user: Annotated[str, D
 
         inserted = len(session.new)
         session.commit()
-    pathlib.Path(temporary_fp).unlink()
+    Path(temporary_fp).unlink()
 
     return {"count": inserted}
 
