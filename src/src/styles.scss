@@ -1,5 +1,6 @@
 @use "primeicons/primeicons.css";
 @plugin 'tailwindcss-primeui';
+@variant dark (&:where(.dark, .dark *));
 
 @layer tailwind, primeng;
 

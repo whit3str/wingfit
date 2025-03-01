@@ -1,9 +1,6 @@
 import { Routes } from '@angular/router';
 import { BaseLayoutComponent } from './components/base-layout/base-layout.component';
-
 import { AuthComponent } from './components/auth/auth.component';
-
-// import { AuthGuard } from './services/auth.guard';
 import { HistoryComponent } from './components/history/history.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { PersonalRecordsComponent } from './components/personal-records/personal-records.component';
@@ -58,7 +55,11 @@ export const routes: Routes = [
         component: StatisticsComponent,
         title: 'Wingfit - Statistics',
       },
-      { path: 'stash', component: StashComponent, title: 'Wingfit - Stash' },
+      {
+        path: 'stash',
+        component: StashComponent,
+        title: 'Wingfit - Stash',
+      },
 
       {
         path: 'programs',

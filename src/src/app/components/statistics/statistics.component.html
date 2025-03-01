@@ -1,5 +1,5 @@
 <section class="mx-auto fixed-toolbar-on-scroll">
-    <p-toolbar [style]="{ border: '0' }" [styleClass]="'md:px-8 w-full bg-slate-50 dark:bg-surface-900'">
+    <p-toolbar [style]="{ border: '0' }" [styleClass]="'md:!px-8 !bg-slate-50 dark:!bg-surface-900'">
         <ng-template #start></ng-template>
 
         <ng-template #center>
@@ -44,7 +44,8 @@
                 </div>
                 <div>
                     @defer {
-                    <span class="text-4xl font-semibold text-SLATE-700">{{ totalBlocs || '-' }}</span>
+                    <span class="text-4xl font-semibold text-slate-700 dark:text-gray-200">{{ totalBlocs || '-'
+                        }}</span>
                     } @placeholder (minimum 0.5s) {
                     <p-skeleton height="2.5rem" width="5rem"></p-skeleton>
                     }
@@ -119,7 +120,7 @@
         </p-card>
     </div>
 
-    <div class="md:w-1/4 flex items-center justify-center bg-white dark:bg-surface-900 shadow-xs rounded-lg">
+    <div class="md:w-1/4 flex items-center justify-center bg-white dark:bg-surface-900 shadow-sm rounded-lg">
         @defer {
         @if (blocsByCategory.labels.length) {
         <p-chart type="pie" [data]="blocsByCategory" [options]="pieGraphOptions" height="160px" class="p-4" />

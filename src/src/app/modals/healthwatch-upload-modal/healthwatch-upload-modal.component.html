@@ -5,9 +5,12 @@
     <p-tabpanels>
         <p-tabpanel value="whoop">
             <div class="mt-4 w-full grid">
-                <div class="p-4 mx-auto max-w-screen-xl">
+                <div class="mx-auto p-3 border-l-4 border-gray-300">The export feature can be found in the Whoop
+                    Application, under <span class="font-mono">More > App Settings > Data Export</span></div>
+
+                <div class="mt-4 p-4 mx-auto max-w-screen-xl">
                     <div class="max-w-screen-md text-center">
-                        <h2 class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900">
+                        <h2 class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900 dark:text-gray-300">
                             Archive
                         </h2>
                         <div class="p-2 mt-4">
@@ -19,10 +22,10 @@
 
                 <div class="mt-4 p-4 mx-auto max-w-screen-xl">
                     <div class="max-w-screen-md text-center">
-                        <h2 class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900">
+                        <h2 class="mb-0 text-4xl tracking-tight font-extrabold text-gray-900 dark:text-gray-300">
                             Export Link
                         </h2>
-                        <div class="p-2 mt-4">
+                        <div class="p-2 mt-4 grid gap-2">
                             <input type="text" pInputText [formControl]="linkInput" placeholder="Whoop URL" />
                             <p-button label="Confirm" [disabled]="!linkInput.value" (click)="linkConfirm()" text />
                         </div>
