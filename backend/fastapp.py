@@ -1324,21 +1324,6 @@ def delete_user_api_token(
     session.refresh(db_user)
     return {}
 
-@app.get("/api/stats/blocs_by_category")
-def get_blocs_count_by_category(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)], year: str | int | None = None) -> list:
-    year = int(year) if year else datetime.now().year
-
-    query = (
-        select(BlocCategory.id, BlocCategory.name, BlocCategory.color, func.count(Bloc.id).label("blocs"))
-        .join(Bloc, Bloc.category_id == BlocCategory.id)
-        .where(Bloc.user == current_user)
-        .where(extract("year", Bloc.cdate) == year)
-        .group_by(BlocCategory.id)
-    )
-
-    result = session.exec(query).all()
-    return [{"id": c.id, "name": c.name.upper(), "color": c.color, "count": c.blocs} for c in result]
-
 
 @app.get("/api/stats/week_duration_total")
 def get_total_duration_per_week(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)], year: str | int | None = None) -> list:

@@ -87,6 +87,7 @@ export class BlocCreateModalComponent {
     // Normalize data for API POST
     let ret = this.blocForm.value;
     ret['cdate'] = this.utilsService.Iso8601ToStr(ret['cdate']);
+    if (!ret['duration']) ret['duration'] = 0;
     this.ref.close(ret);
   }
 }

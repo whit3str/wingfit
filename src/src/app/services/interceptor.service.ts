@@ -106,10 +106,10 @@ export const Interceptor = (
 
         // Unauthenticated, AT exists but is expired (authServices.accessToken truethy), we refresh it
         return authService.refreshAccessToken().pipe(
-          switchMap((_) => {
+          switchMap((tokens) => {
             req = req.clone({
               setHeaders: {
-                Authorization: `Bearer ${authService.accessToken}`,
+                Authorization: `Bearer ${tokens.access_token}`,
               },
             });
             return next(req);

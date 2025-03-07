@@ -391,16 +391,6 @@ export class ApiService {
   }
 
   // Stats endpoints
-  getBlocsByCategory(year: number): Observable<BlocsByCategory[]> {
-    let params = new HttpParams();
-    params = params.set('year', year);
-
-    return this.httpClient.get<BlocsByCategory[]>(
-      this.apiBaseUrl + '/stats/blocs_by_category',
-      { params },
-    );
-  }
-
   getWeeklyDurationTotal(year: number): Observable<WeeklyDurationTotal[]> {
     let params = new HttpParams();
     params = params.set('year', year);

@@ -13,7 +13,6 @@ export interface Token {
 
 const JWT_TOKEN = 'WINGFIT_AT';
 const REFRESH_TOKEN = 'WINGFIT_RT';
-const JWT_EXPIRE = 'WINGFIT_ATT';
 const JWT_USER = 'WINGFIT_USER';
 
 @Injectable({ providedIn: 'root' })
@@ -45,14 +44,6 @@ export class AuthService {
     return localStorage.getItem(JWT_TOKEN) ?? '';
   }
 
-  set accessTokenExp(date: number) {
-    localStorage.setItem(JWT_EXPIRE, date.toString());
-  }
-
-  get accessTokenExp(): string {
-    return localStorage.getItem(JWT_EXPIRE) ?? '';
-  }
-
   set refreshToken(token: string) {
     localStorage.setItem(REFRESH_TOKEN, token);
   }
@@ -63,8 +54,6 @@ export class AuthService {
 
   storeTokens(tokens: Token): void {
     this.accessToken = tokens.access_token;
-    this.accessTokenExp =
-      this._getTokenExpirationDate(tokens.access_token)?.valueOf() ?? -1;
     this.refreshToken = tokens.refresh_token;
   }
 
@@ -134,12 +123,11 @@ export class AuthService {
 
   private removeTokens(): void {
     localStorage.removeItem(JWT_TOKEN);
-    localStorage.removeItem(JWT_EXPIRE);
     localStorage.removeItem(REFRESH_TOKEN);
     localStorage.removeItem(JWT_USER);
   }
 
-  isTokenExpired(token: string, offsetSeconds?: number): boolean {
+  isTokenExpired(token: string): boolean {
     // Return if there is no token
     if (!token || token === '') {
       return true;
@@ -147,14 +135,13 @@ export class AuthService {
 
     // Get the expiration date
     const date = this._getTokenExpirationDate(token);
-    offsetSeconds = offsetSeconds || 0;
 
     if (date === null) {
       return true;
     }
 
     // Check if the token is expired
-    return !(date.valueOf() > new Date().valueOf() + offsetSeconds * 1000);
+    return !(date.valueOf() > new Date().valueOf());
   }
 
   private _b64DecodeUnicode(str: any): string {

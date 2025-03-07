@@ -10,6 +10,14 @@ import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { HealthwatchUploadModalComponent } from '../../modals/healthwatch-upload-modal/healthwatch-upload-modal.component';
 import { UtilsService } from '../../services/utils.service';
 
+export interface StatGauge {
+  first: number;
+  last: number;
+  average_pct: number;
+  q_start_pct: number;
+  q_end_pct: number;
+}
+
 @Component({
   selector: 'app-statistics',
   imports: [
@@ -30,15 +38,19 @@ export class StatisticsComponent {
     window.screen.width < 768 || navigator.userAgent.indexOf('Mobi') > -1;
 
   categoryDurationPerWeek: any;
-  blocsByCategory: any;
+  durationsByCategory: any;
   strainRecoveryComboGraph: any;
 
   averageSleepDuration = 0;
   averageStrain = 0;
+  averageRecovery = 0;
   averageHRV = 0;
   averageRestingHR = 0;
   totalWorkoutsHours = 0;
-  totalBlocs = 0;
+
+  strainGauge: StatGauge | undefined;
+  recoveryGauge: StatGauge | undefined;
+  hrvGauge: StatGauge | undefined;
 
   pieGraphOptions = {
     maintainAspectRatio: false,
@@ -51,7 +63,11 @@ export class StatisticsComponent {
       tooltip: {
         callbacks: {
           label: (tooltipItem: any) => {
-            return ` ${tooltipItem.raw}`;
+            return (
+              ` ${(tooltipItem.raw / 60) ^ 0}`.slice(-2) +
+              'h' +
+              ('0' + (tooltipItem.raw % 60)).slice(-2)
+            );
           },
         },
       },
@@ -180,30 +196,6 @@ export class StatisticsComponent {
       },
     });
 
-    this.apiService.getBlocsByCategory(this.year).subscribe({
-      next: (data) => {
-        if (!data.length) {
-          this.totalBlocs = 0;
-          this.blocsByCategory = { labels: [], datasets: [] };
-          return;
-        }
-
-        this.totalBlocs = data.reduce((acc, c) => {
-          acc += c.count;
-          return acc;
-        }, 0);
-        this.blocsByCategory = {
-          labels: data.map((c) => c.name),
-          datasets: [
-            {
-              data: data.map((c) => c.count),
-              backgroundColor: data.map((c) => c.color),
-            },
-          ],
-        };
-      },
-    });
-
     this.apiService.getHealthWatchData(this.year).subscribe({
       next: (data) => {
         if (!data.length) {
@@ -211,7 +203,11 @@ export class StatisticsComponent {
           this.averageHRV = 0;
           this.averageRestingHR = 0;
           this.averageStrain = 0;
+          this.averageRecovery = 0;
           this.strainRecoveryComboGraph = { labels: [], datasets: [] };
+          this.strainGauge = undefined;
+          this.recoveryGauge = undefined;
+          this.hrvGauge = undefined;
           return;
         }
 
@@ -219,16 +215,24 @@ export class StatisticsComponent {
           (a, b) => new Date(a.cdate).getTime() - new Date(b.cdate).getTime(),
         );
 
-        const totals = { sleep: 0, hrv: 0, strain: 0, restingHR: 0 };
+        const totals = {
+          sleep: 0,
+          hrv: 0,
+          strain: 0,
+          recovery: 0,
+          restingHR: 0,
+        };
         const labels: string[] = [];
         const strainData: number[] = [];
         const recoveryData: number[] = [];
+        const hrvData: number[] = [];
         const count = data.length;
 
         data.forEach((d) => {
           totals.sleep += d.sleep_duration_total;
           totals.hrv += d.hrv;
           totals.strain += d.strain;
+          totals.recovery += d.recovery;
           totals.restingHR += d.resting_hr;
 
           labels.push(
@@ -239,6 +243,7 @@ export class StatisticsComponent {
           );
           strainData.push(d.strain);
           recoveryData.push(d.recovery);
+          hrvData.push(d.hrv);
         });
 
         this.strainRecoveryComboGraph = {
@@ -267,15 +272,61 @@ export class StatisticsComponent {
         this.averageHRV = Math.round(totals.hrv / count);
         this.averageRestingHR = Math.round(totals.restingHR / count);
         this.averageStrain = +(totals.strain / count).toFixed(1);
+        this.averageRecovery = Math.round(
+          +(totals.recovery / count).toFixed(1),
+        );
+
+        const sortedStrain = new Float64Array(strainData).sort();
+        const maxStrain = sortedStrain[sortedStrain.length - 1];
+        this.strainGauge = {
+          first: sortedStrain[0],
+          last: maxStrain,
+          average_pct: (100 * this.averageStrain) / maxStrain,
+          q_start_pct: (100 * this.getQuartile(0.25, sortedStrain)) / maxStrain,
+          q_end_pct: (100 * this.getQuartile(0.75, sortedStrain)) / maxStrain,
+        };
+
+        const sortedRecovery = new Float64Array(recoveryData).sort();
+        const maxRecovery = sortedRecovery[sortedRecovery.length - 1];
+        this.recoveryGauge = {
+          first: sortedRecovery[0],
+          last: maxRecovery,
+          average_pct: this.averageRecovery,
+          q_start_pct: this.getQuartile(0.25, sortedRecovery),
+          q_end_pct: this.getQuartile(0.75, sortedRecovery),
+        };
+
+        const sortedHRV = new Float64Array(hrvData).sort();
+        const maxHRV = sortedHRV[sortedHRV.length - 1];
+        this.hrvGauge = {
+          first: sortedHRV[0],
+          last: maxHRV,
+          average_pct: (100 * this.averageHRV) / maxHRV,
+          q_start_pct: (100 * this.getQuartile(0.25, sortedHRV)) / maxHRV,
+          q_end_pct: (100 * this.getQuartile(0.75, sortedHRV)) / maxHRV,
+        };
       },
     });
 
     this.apiService.getWeeklyDuration(this.year).subscribe({
       next: (data) => {
         if (!data.length) {
+          this.durationsByCategory = { labels: [], datasets: [] };
           this.categoryDurationPerWeek = { labels: [], datasets: [] };
           return;
         }
+
+        this.durationsByCategory = {
+          labels: data.map((c) => c.label),
+          datasets: [
+            {
+              data: data.map((c) =>
+                c.data.reduce((sum, value) => sum + value, 0),
+              ),
+              backgroundColor: data.map((c) => c.backgroundColor),
+            },
+          ],
+        };
 
         this.categoryDurationPerWeek = {
           labels: [
@@ -290,6 +341,16 @@ export class StatisticsComponent {
       },
     });
   }
+
+  getQuartile = (q: number, arr: Float64Array): number => {
+    const pos = q * (arr.length - 1);
+    const lower = Math.floor(pos);
+    const upper = Math.ceil(pos);
+
+    return lower === upper
+      ? arr[lower]
+      : arr[lower] + (arr[upper] - arr[lower]) * (pos - lower);
+  };
 
   nextYear() {
     this.year = this.year + 1;
