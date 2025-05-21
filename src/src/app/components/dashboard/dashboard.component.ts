@@ -183,11 +183,13 @@ export class DashboardComponent {
         case 'edit':
           // Delete previous and insert the Bloc, that will be sorted afterwards
           _displayedBlocs.forEach((bloc) => {
-            this.displayedBlocs[bloc.cdate].splice(
-              this.displayedBlocs[bloc.cdate].findIndex((b) => b.id == bloc.id),
-              1,
-              bloc,
+            let editedBlocIndex = this.displayedBlocs[bloc.cdate].findIndex(
+              (b) => b.id == bloc.id,
             );
+            this.displayedBlocsDuration[bloc.cdate] -=
+              this.displayedBlocs[bloc.cdate][editedBlocIndex].duration || 0; // Substract the bloc before edit duration
+            this.displayedBlocs[bloc.cdate].splice(editedBlocIndex, 1, bloc);
+            this.displayedBlocsDuration[bloc.cdate] += bloc.duration || 0; // Add the edited bloc duration
             this.sortDisplayedBlocs();
           });
           break;

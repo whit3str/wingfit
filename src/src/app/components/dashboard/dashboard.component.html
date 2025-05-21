@@ -1,7 +1,7 @@
 <section class="mx-auto fixed-toolbar-on-scroll">
   <p-toolbar [style]="{ border: '0' }" [styleClass]="'md:!px-8 !bg-slate-50 dark:!bg-surface-900'">
     <ng-template #start>
-      <p-button class="hidden md:block mr-2" text severity="secondary" (click)="resetDateToToday()"
+      <p-button class="hidden md:block mr-2" text (click)="resetDateToToday()"
         [disabled]="dateToStr(selectedDate) == dateToStr(todayDate)">Today</p-button>
 
       <!-- Screen -->
