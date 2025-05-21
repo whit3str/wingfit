@@ -1,359 +1,425 @@
 <section class="mx-auto fixed-toolbar-on-scroll">
-    <p-toolbar [style]="{ border: '0' }" [styleClass]="'md:!px-8 !bg-slate-50 dark:!bg-surface-900'">
-        <ng-template #start></ng-template>
+  <p-toolbar [style]="{ border: '0' }" [styleClass]="'md:!px-8 !bg-slate-50 dark:!bg-surface-900'">
+    <ng-template #start>
+      <div class="w-32">
+        @if (year == today.getFullYear()) {
+        <p-togglebutton (click)="toggleDataRange()" [ngModel]="latestOnly" [onLabel]="'Latest (30d)'"
+          offLabel="Yearly" />
+        }
+      </div>
+    </ng-template>
 
-        <ng-template #center>
-            <div class="flex items-center gap-2">
-                <p-button (click)="previousYear()" icon="pi pi-angle-left" text severity="secondary" />
-                <span class="text-2xl font-semibold py-2">{{ year }}</span>
-                <p-button (click)="nextYear()" icon="pi pi-angle-right" text severity="secondary" />
-            </div>
-        </ng-template>
+    <ng-template #center>
+      <div class="flex items-center gap-2">
+        <p-button (click)="previousYear()" icon="pi pi-angle-left" text severity="secondary" />
+        <span class="text-2xl font-semibold py-2">{{ year }}</span>
+        <p-button (click)="nextYear()" icon="pi pi-angle-right" text severity="secondary" />
+      </div>
+    </ng-template>
 
-        <ng-template #end>
-            <p-button text (click)="healthWatchUpload()" severity="secondary"><i
-                    class="material-symbols-outlined">watch_screentime</i></p-button>
-        </ng-template>
-    </p-toolbar>
+    <ng-template #end>
+      <p-button text (click)="healthWatchUpload()" severity="secondary"><i
+          class="material-symbols-outlined">watch_screentime</i></p-button>
+    </ng-template>
+  </p-toolbar>
 </section>
 
 <div class="max-w-screen-2xl mx-auto flex flex-col md:flex-row gap-4 px-4 m-4">
-    <div class="grid md:grid-cols-3 gap-4 md:w-3/4">
-        <p-card styleClass="h-full">
-            <div class="flex justify-between items-center mt-2">
-                <div>
-                    <span class="text-lg font-semibold">Workouts duration</span>
+  <div class="grid md:grid-cols-3 gap-4 md:w-3/4">
+    <p-card styleClass="h-full">
+      <div class="flex justify-between items-center mt-2">
+        <div>
+          <span class="text-lg font-semibold">Workouts duration</span>
+        </div>
+        <div>
+          @defer {
+          <span class="text-3xl font-semibold text-slate-700 dark:text-gray-200">{{ totalWorkoutsHours ?
+            (totalWorkoutsHours |
+            minsToHour:false:true) : '-'
+            }}</span>
+          <span class="text-slate-700 dark:text-gray-200 text-sm">h</span>
+          } @placeholder (minimum 0.5s) {
+          <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
+          }
+        </div>
+      </div>
+    </p-card>
+
+    <p-card styleClass="h-full">
+      <div class="flex justify-between items-center mt-2">
+        <div>
+          <span class="text-lg font-semibold">Avg. Sleep Duration</span>
+        </div>
+        <div>
+          @defer {
+          <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200"
+            [class.!text-red-700]="averageSleepDuration > 0 && averageSleepDuration < 480"
+            [class.!text-green-700]="averageSleepDuration >= 480">
+            {{ averageSleepDuration ? (averageSleepDuration | minsToHour:false) : '-' }}</span>
+          @if (sleepTrend) {
+          <span [ngClass]="{
+                'text-red-600': sleepTrend.direction === 'down',
+                'text-green-600': sleepTrend.direction === 'up',
+                'text-gray-400': sleepTrend.direction === ''
+                }" class="text-xs ml-1">
+            <span class="pi" [ngClass]="{
+                'pi-arrow-down-right': sleepTrend.direction === 'down',
+                'pi-arrow-up-right': sleepTrend.direction === 'up',
+                'pi-equals': sleepTrend.direction === ''
+                }"></span> {{ sleepTrend.change | number: '1.0-0' }}m </span>
+          }
+          } @placeholder (minimum 0.5s) {
+          <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
+          }
+        </div>
+      </div>
+    </p-card>
+
+    <p-card styleClass="h-full">
+      <div class="flex justify-between items-center mt-2">
+        <div>
+          <span class="text-lg font-semibold">Avg. Resting HR</span>
+        </div>
+        <div>
+          @defer {
+          <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200">{{ averageRestingHR || '-'
+            }}</span>
+          <span class="text-sm text-gray-700 dark:text-gray-200">bpm</span>
+          @if (restingHRTrend) {
+          <span [ngClass]="{
+              'text-green-600': restingHRTrend.direction === 'down',
+              'text-red-600': restingHRTrend.direction === 'up',
+              'text-gray-400': restingHRTrend.direction === ''
+              }" class="text-xs ml-1">
+            <span class="pi" [ngClass]="{
+              'pi-arrow-down-right': restingHRTrend.direction === 'down',
+              'pi-arrow-up-right': restingHRTrend.direction === 'up',
+              'pi-equals': restingHRTrend.direction === ''
+              }"></span> {{ restingHRTrend.change | number: '1.0-1' }} </span>
+          }
+          } @placeholder (minimum 0.5s) {
+          <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
+          }
+        </div>
+      </div>
+    </p-card>
+
+    <p-card styleClass="h-full">
+      <div class="flex justify-between items-center">
+        <div class="relative group cursor-help">
+          <span class="text-lg font-semibold">HR Variability</span>
+          <span class="absolute top-1 -right-2 size-1.5 bg-black rounded-full"></span>
+
+          <div
+            class="absolute invisible opacity-0 group-hover:visible group-hover:opacity-100 top-full z-50 left-1/2 -translate-x-1/2 mb-3 w-72 transition-all duration-300 ease-out transform group-hover:translate-y-2 -translate-y-2">
+            <div
+              class="relative p-4 bg-gradient-to-br bg-gray-900/95 backdrop-blur-md rounded-2xl border border-white/10 shadow-md">
+              <div class="flex items-center gap-3 mb-2">
+                <div class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/20">
+                  <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-indigo-400">
+                    <path clip-rule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      fill-rule="evenodd"></path>
+                  </svg>
                 </div>
-                <div>
-                    @defer {
-                    <span class="text-3xl font-semibold text-slate-700 dark:text-gray-200">{{ totalWorkoutsHours ?
-                        (totalWorkoutsHours |
-                        minsToHour:false:true) : '-'
-                        }}</span>
-                    <span class="text-slate-700 dark:text-gray-200 text-sm">h</span>
-                    } @placeholder (minimum 0.5s) {
-                    <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
-                    }
-                </div>
+                <h3 class="text-sm font-semibold text-white">Heart Rate Variability</h3>
+              </div>
+
+              <div class="space-y-2">
+                <p class="text-sm text-gray-300 select-none">The average heart rate variability for
+                  WHOOP members is
+                  78 for 25-year-olds, 60 for 35-year-olds and 48 for 45-year-olds. <a class="text-blue-500"
+                    href="https://www.whoop.com/us/en/thelocker/what-is-a-good-hrv/" target="_blank">Source</a></p>
+              </div>
             </div>
-        </p-card>
+          </div>
+        </div>
+        <div>
+          @defer {
+          <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200"
+            [class.!text-red-700]="averageHRV > 0 && averageHRV < 50"
+            [class.!text-amber-700]="averageHRV >= 50 && averageHRV < 80" [class.!text-green-700]="averageHRV >= 80">{{
+            averageHRV || '-' }}</span>
+          <span class="text-gray-700 dark:text-gray-200 text-sm">ms</span>
+          @if (hrvTrend) {
+          <span [ngClass]="{
+              'text-red-600': hrvTrend.direction === 'down',
+              'text-green-600': hrvTrend.direction === 'up',
+              'text-gray-400': hrvTrend.direction === ''
+              }" class="text-xs ml-1">
+            <span class="pi" [ngClass]="{
+              'pi-arrow-down-right': hrvTrend.direction === 'down',
+              'pi-arrow-up-right': hrvTrend.direction === 'up',
+              'pi-equals': hrvTrend.direction === ''
+              }"></span> {{ hrvTrend.change | number: '1.0-1' }} </span>
+          }
+          } @placeholder (minimum 0.5s) {
+          <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
+          }
+        </div>
+      </div>
 
-        <p-card styleClass="h-full">
-            <div class="flex justify-between items-center mt-2">
-                <div>
-                    <span class="text-lg font-semibold">Avg. Sleep Duration</span>
+      @defer () {
+      @if (hrvGauge) {
+      <div class="mt-4">
+        <div class="relative h-2 w-full">
+          <div class="absolute -top-0.5 h-3 rounded-sm border border-dashed border-violet-200 bg-violet-50"
+            [style.left]="hrvGauge.q_start_pct+'%'" [style.width]="(hrvGauge.q_end_pct - hrvGauge.q_start_pct) + '%'">
+          </div>
+          <div class="relative h-2 w-full rounded-sm bg-violet-200">
+            <div class="absolute h-2 rounded-sm bg-violet-400" [style.left]="hrvGauge.q_start_pct+'%'"
+              [style.width]="(hrvGauge.q_end_pct - hrvGauge.q_start_pct) + '%'"></div>
+            <div class="absolute top-[-4px] w-1 h-4 rounded bg-violet-500 ring-1 ring-white ring-offset-0"
+              [style.left]="hrvGauge.average_pct+'%'" [title]="averageHRV"></div>
+          </div>
+        </div>
+        <div class="mt-0.5 flex justify-between text-xs tracking-tight">
+          <span>{{ hrvGauge.first }}</span><span>{{ hrvGauge.last }}</span>
+        </div>
+      </div>
+      }
+      } @placeholder (minimum 0.5s) {
+      <div class="mt-2">
+        <p-skeleton height="2.25rem"></p-skeleton>
+      </div>
+      }
+    </p-card>
+
+    <p-card styleClass="h-full">
+      <div class="flex justify-between items-center">
+        <div>
+          <span class="text-lg font-semibold">Recovery</span>
+        </div>
+        <div>
+          @defer {
+          <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200"
+            [class.!text-red-700]="averageRecovery > 0 && averageRecovery < 33"
+            [class.!text-yellow-300]="averageRecovery >= 33 && averageRecovery < 67"
+            [class.!text-green-700]="averageRecovery >= 67">{{ averageRecovery || '-' }}</span>
+          @if (recoveryTrend) {
+          <span [ngClass]="{
+            'text-red-600': recoveryTrend.direction === 'down',
+            'text-green-600': recoveryTrend.direction === 'up',
+            'text-gray-400': recoveryTrend.direction === ''
+            }" class="text-xs ml-1">
+            <span class="pi" [ngClass]="{
+              'pi-arrow-down-right': recoveryTrend.direction === 'down',
+              'pi-arrow-up-right': recoveryTrend.direction === 'up',
+              'pi-equals': recoveryTrend.direction === ''
+              }"></span> {{ recoveryTrend.change | number: '1.0-1' }} </span>
+          }
+          } @placeholder (minimum 0.5s) {
+          <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
+          }
+        </div>
+      </div>
+
+      @defer () {
+      @if (recoveryGauge) {
+      <div class="mt-4">
+        <div class="relative h-2 w-full">
+          <div class="absolute -top-0.5 z-20 h-3 rounded-sm border border-dashed border-gray-500 dark:border-gray-200"
+            [style.left]="recoveryGauge.q_start_pct+'%'"
+            [title]="'From ' + recoveryGauge.q_start_pct + '% to ' + recoveryGauge.q_end_pct + '%'"
+            [style.width]="(recoveryGauge.q_end_pct - recoveryGauge.q_start_pct) + '%'"></div>
+
+          <div class="relative h-2 w-full rounded-sm">
+            <div class="absolute h-2 rounded-l-sm bg-red-400" style="left: 0%; width: 33%;"></div>
+            <div class="absolute h-2 bg-yellow-300" style="left: 33%; width: 34%;"></div>
+            <div class="absolute h-2 bg-emerald-400" style="left: 67%; width: 33%;"></div>
+
+            <div class="absolute top-[-4px] z-30 w-1 h-4 rounded ring-1 ring-white ring-offset-0"
+              [class.!bg-red-500]="averageRecovery > 0 && averageRecovery < 33"
+              [class.!bg-yellow-400]="averageRecovery >= 33 && averageRecovery < 67"
+              [class.!bg-emerald-500]="averageRecovery >= 67" [style.left]="recoveryGauge.average_pct+'%'"
+              [title]="averageRecovery"></div>
+          </div>
+        </div>
+        <div class="mt-0.5 flex justify-between text-xs tracking-tight">
+          <span>{{ recoveryGauge.first }}</span><span>{{ recoveryGauge.last }}</span>
+        </div>
+      </div>
+      }
+      } @placeholder (minimum 0.5s) {
+      <div class="mt-2">
+        <p-skeleton height="2.25rem"></p-skeleton>
+      </div>
+      }
+    </p-card>
+
+    <p-card styleClass="h-full">
+      <div class="flex justify-between items-center">
+        <div class="relative group cursor-help">
+          <span class="text-lg font-semibold">Avg. Strain</span>
+          <span class="absolute top-1 -right-2 size-1.5 bg-black rounded-full"></span>
+
+          <div
+            class="absolute invisible opacity-0 group-hover:visible group-hover:opacity-100 top-full z-50 left-1/2 -translate-x-1/2 mb-3 w-72 transition-all duration-300 ease-out transform group-hover:translate-y-2 -translate-y-2">
+            <div
+              class="relative p-4 bg-gradient-to-br bg-gray-900/95 backdrop-blur-md rounded-2xl border border-white/10 shadow-md">
+              <div class="flex items-center gap-3 mb-2">
+                <div class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/20">
+                  <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-indigo-400">
+                    <path clip-rule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      fill-rule="evenodd"></path>
+                  </svg>
                 </div>
-                <div>
-                    @defer {
-                    <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200"
-                        [class.!text-red-700]="averageSleepDuration > 0 && averageSleepDuration < 480"
-                        [class.!text-green-700]="averageSleepDuration >= 480">
-                        {{ averageSleepDuration ? (averageSleepDuration | minsToHour:false) : '-' }}</span>
-                    } @placeholder (minimum 0.5s) {
-                    <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
-                    }
+                <h3 class="text-sm font-semibold text-white">Strain</h3>
+              </div>
+
+              <div class="space-y-2">
+                <div class="text-sm text-gray-300 select-none">Strain is a measure of cardiovascular and
+                  muscular exertion. <a class="text-blue-500"
+                    href="https://www.whoop.com/us/en/thelocker/how-does-whoop-strain-work-101/"
+                    target="_blank">Source</a><br>
+                  <div class="ml-2">
+                    <span class="text-green-400 font-semibold">0-10: Light</span>, <span
+                      class="text-yellow-400 font-semibold">10-14: Moderate</span>,<br>
+                    <span class="text-orange-400 font-semibold">14-18: High</span>, <span
+                      class="text-red-400 font-semibold">18-21: Intense</span>
+                  </div>
                 </div>
+              </div>
             </div>
-        </p-card>
+          </div>
+        </div>
 
-        <p-card styleClass="h-full">
-            <div class="flex justify-between items-center mt-2">
-                <div>
-                    <span class="text-lg font-semibold">Resting HR</span>
-                </div>
-                <div>
-                    @defer {
-                    <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200">{{ averageRestingHR || '-'
-                        }}</span>
-                    <span class="text-gray-700 dark:text-gray-200 text-sm">bpm</span>
-                    } @placeholder (minimum 0.5s) {
-                    <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
-                    }
-                </div>
+        <div>
+          @defer {
+          <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200"
+            [class.!text-blue-500]="averageStrain">{{ averageStrain || '-' }}</span>
+          @if (strainTrend) {
+          <span [ngClass]="{
+              'text-red-600': strainTrend.direction === 'down',
+              'text-green-600': strainTrend.direction === 'up',
+              'text-gray-400': strainTrend.direction === ''
+              }" class="text-xs ml-1">
+            <span class="pi" [ngClass]="{
+              'pi-arrow-down-right': strainTrend.direction === 'down',
+              'pi-arrow-up-right': strainTrend.direction === 'up',
+              'pi-equals': strainTrend.direction === ''
+              }"></span> {{ strainTrend.change | number: '1.0-1' }}</span>
+          }
+          } @placeholder (minimum 0.5s) {
+          <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
+          }
+        </div>
+      </div>
+
+      @defer () {
+      @if (strainGauge) {
+      <div class="mt-4">
+        <div class="relative h-2 w-full">
+          <div class="absolute -top-0.5 h-3 rounded-sm border border-dashed border-blue-400 bg-blue-200"
+            [style.left]="strainGauge.q_start_pct+'%'"
+            [style.width]="(strainGauge.q_end_pct - strainGauge.q_start_pct) + '%'"></div>
+          <div class="relative h-2 w-full rounded-sm bg-blue-200">
+            <div class="absolute h-2 rounded-sm bg-blue-400" [style.left]="strainGauge.q_start_pct+'%'"
+              [style.width]="(strainGauge.q_end_pct - strainGauge.q_start_pct) + '%'"></div>
+            <div class="absolute top-[-4px] z-30 w-1 h-4 rounded bg-blue-500 ring-1 ring-white ring-offset-0"
+              [style.left]="strainGauge.average_pct+'%'" [title]="averageStrain"></div>
+          </div>
+        </div>
+        <div class="mt-0.5 flex justify-between text-xs tracking-tight">
+          <span>{{ strainGauge.first }}</span><span>{{ strainGauge.last }}</span>
+        </div>
+      </div>
+      }
+      } @placeholder (minimum 0.5s) {
+      <div class="mt-2">
+        <p-skeleton height="2.25rem"></p-skeleton>
+      </div>
+      }
+    </p-card>
+  </div>
+
+  <div class="md:w-1/4">
+    <p-card styleClass="h-full">
+      <div>
+        <div class="flex justify-center">
+          @defer {
+          @if (durationsByCategory.labels.length) {
+          <p-chart type="pie" [data]="durationsByCategory" [options]="pieGraphOptions" height="160px" />
+          } @else {
+          <div class="flex justify-center">
+            <div class="p-4">
+              <h2 class="mb-0 text-2xl tracking-tight font-semibold text-gray-900">
+                Nothing to see yet
+              </h2>
+              <p class="mt-4 font-light text-center text-gray-500">
+                {{ year }} has no workouts
+              </p>
             </div>
-        </p-card>
-
-        <p-card styleClass="h-full">
-            <div class="flex justify-between items-center">
-                <div class="relative group cursor-help">
-                    <span class="text-lg font-semibold">HR Variability</span>
-                    <span class="absolute top-1 -right-2 size-1.5 bg-black rounded-full"></span>
-
-                    <div
-                        class="absolute invisible opacity-0 group-hover:visible group-hover:opacity-100 top-full z-50 left-1/2 -translate-x-1/2 mb-3 w-72 transition-all duration-300 ease-out transform group-hover:translate-y-2 -translate-y-2">
-                        <div
-                            class="relative p-4 bg-gradient-to-br bg-gray-900/95 backdrop-blur-md rounded-2xl border border-white/10 shadow-md">
-                            <div class="flex items-center gap-3 mb-2">
-                                <div class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/20">
-                                    <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-indigo-400">
-                                        <path clip-rule="evenodd"
-                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                            fill-rule="evenodd"></path>
-                                    </svg>
-                                </div>
-                                <h3 class="text-sm font-semibold text-white">Heart Rate Variability</h3>
-                            </div>
-
-                            <div class="space-y-2">
-                                <p class="text-sm text-gray-300 select-none">The average heart rate variability for
-                                    WHOOP members is
-                                    78 for 25-year-olds, 60 for 35-year-olds and 48 for 45-year-olds. <a
-                                        class="text-blue-500"
-                                        href="https://www.whoop.com/us/en/thelocker/what-is-a-good-hrv/"
-                                        target="_blank">Source</a></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    @defer {
-                    <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200"
-                        [class.!text-red-700]="averageHRV > 0 && averageHRV < 50"
-                        [class.!text-amber-700]="averageHRV >= 50 && averageHRV < 80"
-                        [class.!text-green-700]="averageHRV >= 80">{{ averageHRV || '-' }}</span>
-                    <span class="text-gray-700 dark:text-gray-200 text-sm">ms</span>
-                    } @placeholder (minimum 0.5s) {
-                    <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
-                    }
-                </div>
-            </div>
-
-            @defer () {
-            @if (hrvGauge) {
-            <div class="mt-4">
-                <div class="relative h-2 w-full">
-                    <div class="absolute -top-0.5 h-3 rounded-sm border border-dashed border-violet-200 bg-violet-50"
-                        [style.left]="hrvGauge.q_start_pct+'%'"
-                        [style.width]="(hrvGauge.q_end_pct - hrvGauge.q_start_pct) + '%'"></div>
-                    <div class="relative h-2 w-full rounded-sm bg-violet-200">
-                        <div class="absolute h-2 rounded-sm bg-violet-400" [style.left]="hrvGauge.q_start_pct+'%'"
-                            [style.width]="(hrvGauge.q_end_pct - hrvGauge.q_start_pct) + '%'"></div>
-                        <div class="absolute top-[-4px] w-1 h-4 rounded bg-violet-500 ring-1 ring-white ring-offset-0"
-                            [style.left]="hrvGauge.average_pct+'%'" [title]="averageHRV"></div>
-                    </div>
-                </div>
-                <div class="mt-0.5 flex justify-between text-xs tracking-tight">
-                    <span>{{ hrvGauge.first }}</span><span>{{ hrvGauge.last }}</span>
-                </div>
-            </div>
-            }
-            } @placeholder (minimum 0.5s) {
-            <div class="mt-2">
-                <p-skeleton height="2.25rem"></p-skeleton>
-            </div>
-            }
-        </p-card>
-
-        <p-card styleClass="h-full">
-            <div class="flex justify-between items-center">
-                <div>
-                    <span class="text-lg font-semibold">Recovery</span>
-                </div>
-                <div>
-                    @defer {
-                    <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200"
-                        [class.!text-red-700]="averageRecovery > 0 && averageRecovery < 33"
-                        [class.!text-yellow-300]="averageRecovery >= 33 && averageRecovery < 67"
-                        [class.!text-green-700]="averageRecovery >= 67">{{ averageRecovery || '-' }}</span>
-                    } @placeholder (minimum 0.5s) {
-                    <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
-                    }
-                </div>
-            </div>
-
-            @defer () {
-            @if (recoveryGauge) {
-            <div class="mt-4">
-                <div class="relative h-2 w-full">
-                    <div class="absolute -top-0.5 z-20 h-3 rounded-sm border border-dashed border-gray-500 dark:border-gray-200"
-                        [style.left]="recoveryGauge.q_start_pct+'%'"
-                        [title]="'From ' + recoveryGauge.q_start_pct + '% to ' + recoveryGauge.q_end_pct + '%'"
-                        [style.width]="(recoveryGauge.q_end_pct - recoveryGauge.q_start_pct) + '%'"></div>
-
-                    <div class="relative h-2 w-full rounded-sm">
-                        <div class="absolute h-2 rounded-l-sm bg-red-400" style="left: 0%; width: 33%;"></div>
-                        <div class="absolute h-2 bg-yellow-300" style="left: 33%; width: 34%;"></div>
-                        <div class="absolute h-2 bg-emerald-400" style="left: 67%; width: 33%;"></div>
-
-                        <div class="absolute top-[-4px] z-30 w-1 h-4 rounded ring-1 ring-white ring-offset-0"
-                            [class.!bg-red-500]="averageRecovery > 0 && averageRecovery < 33"
-                            [class.!bg-yellow-400]="averageRecovery >= 33 && averageRecovery < 67"
-                            [class.!bg-emerald-500]="averageRecovery >= 67" [style.left]="recoveryGauge.average_pct+'%'"
-                            [title]="averageRecovery"></div>
-                    </div>
-                </div>
-                <div class="mt-0.5 flex justify-between text-xs tracking-tight">
-                    <span>{{ recoveryGauge.first }}</span><span>{{ recoveryGauge.last }}</span>
-                </div>
-            </div>
-            }
-            } @placeholder (minimum 0.5s) {
-            <div class="mt-2">
-                <p-skeleton height="2.25rem"></p-skeleton>
-            </div>
-            }
-        </p-card>
-
-        <p-card styleClass="h-full">
-            <div class="flex justify-between items-center">
-                <div class="relative group cursor-help">
-                    <span class="text-lg font-semibold">Avg. Strain</span>
-                    <span class="absolute top-1 -right-2 size-1.5 bg-black rounded-full"></span>
-
-                    <div
-                        class="absolute invisible opacity-0 group-hover:visible group-hover:opacity-100 top-full z-50 left-1/2 -translate-x-1/2 mb-3 w-72 transition-all duration-300 ease-out transform group-hover:translate-y-2 -translate-y-2">
-                        <div
-                            class="relative p-4 bg-gradient-to-br bg-gray-900/95 backdrop-blur-md rounded-2xl border border-white/10 shadow-md">
-                            <div class="flex items-center gap-3 mb-2">
-                                <div class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/20">
-                                    <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-indigo-400">
-                                        <path clip-rule="evenodd"
-                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                            fill-rule="evenodd"></path>
-                                    </svg>
-                                </div>
-                                <h3 class="text-sm font-semibold text-white">Strain</h3>
-                            </div>
-
-                            <div class="space-y-2">
-                                <div class="text-sm text-gray-300 select-none">Strain is a measure of cardiovascular and
-                                    muscular exertion. <a class="text-blue-500"
-                                        href="https://www.whoop.com/us/en/thelocker/how-does-whoop-strain-work-101/"
-                                        target="_blank">Source</a><br>
-                                    <div class="ml-2">
-                                        <span class="text-green-400 font-semibold">0-9: Light</span>, <span
-                                            class="text-yellow-400 font-semibold">10-13: Moderate</span>,<br>
-                                        <span class="text-orange-400 font-semibold">14-17: High</span>, <span
-                                            class="text-red-400 font-semibold">18-21: Intense</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    @defer {
-                    <span class="text-3xl font-semibold text-gray-700 dark:text-gray-200"
-                        [class.!text-blue-500]="averageStrain">{{ averageStrain || '-' }}</span>
-                    } @placeholder (minimum 0.5s) {
-                    <p-skeleton height="2.25rem" width="5rem"></p-skeleton>
-                    }
-                </div>
-            </div>
-
-            @defer () {
-            @if (strainGauge) {
-            <div class="mt-4">
-                <div class="relative h-2 w-full">
-                    <div class="absolute -top-0.5 h-3 rounded-sm border border-dashed border-blue-400 bg-blue-200"
-                        [style.left]="strainGauge.q_start_pct+'%'"
-                        [style.width]="(strainGauge.q_end_pct - strainGauge.q_start_pct) + '%'"></div>
-                    <div class="relative h-2 w-full rounded-sm bg-blue-200">
-                        <div class="absolute h-2 rounded-sm bg-blue-400" [style.left]="strainGauge.q_start_pct+'%'"
-                            [style.width]="(strainGauge.q_end_pct - strainGauge.q_start_pct) + '%'"></div>
-                        <div class="absolute top-[-4px] z-30 w-1 h-4 rounded bg-blue-500 ring-1 ring-white ring-offset-0"
-                            [style.left]="strainGauge.average_pct+'%'" [title]="averageStrain"></div>
-                    </div>
-                </div>
-                <div class="mt-0.5 flex justify-between text-xs tracking-tight">
-                    <span>{{ strainGauge.first }}</span><span>{{ strainGauge.last }}</span>
-                </div>
-            </div>
-            }
-            } @placeholder (minimum 0.5s) {
-            <div class="mt-2">
-                <p-skeleton height="2.25rem"></p-skeleton>
-            </div>
-            }
-        </p-card>
-    </div>
-
-    <div class="md:w-1/4">
-        <p-card styleClass="h-full">
-            <div>
-                <div class="flex justify-center">
-                    @defer {
-                    @if (durationsByCategory.labels.length) {
-                    <p-chart type="pie" [data]="durationsByCategory" [options]="pieGraphOptions" height="160px" />
-                    } @else {
-                    <div class="flex justify-center">
-                        <div class="p-4">
-                            <h2 class="mb-0 text-2xl tracking-tight font-semibold text-gray-900">
-                                Nothing to see yet
-                            </h2>
-                            <p class="mt-4 font-light text-center text-gray-500">
-                                {{ year }} has no workouts
-                            </p>
-                        </div>
-                    </div>
-                    }
-                    } @placeholder (minimum 0.7s) {
-                    <p-skeleton height="160px" class="w-full"></p-skeleton>
-                    }
-                </div>
-            </div>
-        </p-card>
-    </div>
+          </div>
+          }
+          } @placeholder (minimum 0.7s) {
+          <p-skeleton height="160px" class="w-full"></p-skeleton>
+          }
+        </div>
+      </div>
+    </p-card>
+  </div>
 </div>
 
 <div class="max-w-screen-2xl mx-auto px-4 m-4">
-    <p-card>
-        <div class="p-4">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-gray-900 mb-0">Weekly workouts duration</h1>
-            </div>
+  <p-card>
+    <div class="p-4">
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-900 mb-0">Weekly workouts duration</h1>
+      </div>
 
-            <div class="mt-4">
-                @defer {
-                @if (categoryDurationPerWeek.labels.length) {
-                <p-chart type="bar" [data]="categoryDurationPerWeek" [options]="stackedGraphOptions" />
-                } @else {
-                <div class="flex justify-center mt-4">
-                    <div class="p-4">
-                        <h2 class="mb-0 text-2xl tracking-tight font-semibold text-gray-900">
-                            Nothing to see yet
-                        </h2>
-                        <p class="mt-4 font-light text-center text-gray-500">
-                            {{ year }} has no workouts
-                        </p>
-                    </div>
-                </div>
-                }
-                } @placeholder (minimum 0.7s) {
-                <p-skeleton height="20rem"></p-skeleton>
-                }
-            </div>
+      <div class="mt-4">
+        @defer {
+        @if (categoryDurationPerWeek.labels.length) {
+        <p-chart type="bar" [data]="categoryDurationPerWeek" [options]="stackedGraphOptions" />
+        } @else {
+        <div class="flex justify-center mt-4">
+          <div class="p-4">
+            <h2 class="mb-0 text-2xl tracking-tight font-semibold text-gray-900">
+              Nothing to see yet
+            </h2>
+            <p class="mt-4 font-light text-center text-gray-500">
+              {{ year }} has no workouts
+            </p>
+          </div>
         </div>
-    </p-card>
+        }
+        } @placeholder (minimum 0.7s) {
+        <p-skeleton height="20rem"></p-skeleton>
+        }
+      </div>
+    </div>
+  </p-card>
 </div>
 
 <div class="max-w-screen-2xl mx-auto px-4 m-4">
-    <p-card>
-        <div class="p-4">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-gray-900 mb-0">Whoop Strain / Recovery</h1>
-            </div>
+  <p-card>
+    <div class="p-4">
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-900 mb-0">Whoop Strain / Recovery</h1>
+      </div>
 
-            <div class="mt-4">
-                @defer {
-                @if (strainRecoveryComboGraph.labels.length) {
-                <p-chart type="line" [data]="strainRecoveryComboGraph" [options]="comboGraphOptions" />
-                } @else {
-                <div class="flex justify-center mt-4">
-                    <div class="p-4">
-                        <h2 class="mb-0 text-2xl tracking-tight font-semibold text-gray-900">
-                            Nothing to see yet
-                        </h2>
-                        <p class="mt-4 font-light text-center text-gray-500">
-                            {{ year }} has no Whoop data
-                        </p>
-                    </div>
-                </div>
-                }
-                } @placeholder (minimum 0.7s) {
-                <p-skeleton height="20rem"></p-skeleton>
-                }
-            </div>
+      <div class="mt-4">
+        @defer {
+        @if (strainRecoveryComboGraph.labels.length) {
+        <p-chart type="line" [data]="strainRecoveryComboGraph" [options]="comboGraphOptions" />
+        } @else {
+        <div class="flex justify-center mt-4">
+          <div class="p-4">
+            <h2 class="mb-0 text-2xl tracking-tight font-semibold text-gray-900">
+              Nothing to see yet
+            </h2>
+            <p class="mt-4 font-light text-center text-gray-500">
+              {{ year }} has no Whoop data
+            </p>
+          </div>
         </div>
-    </p-card>
+        }
+        } @placeholder (minimum 0.7s) {
+        <p-skeleton height="20rem"></p-skeleton>
+        }
+      </div>
+    </div>
+  </p-card>
 </div>

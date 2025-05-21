@@ -34,3 +34,18 @@ export interface WeeklyDuration {
   backgroundColor: string;
   data: number[];
 }
+
+export interface StatGauge {
+  first: number;
+  last: number;
+  average_pct: number;
+  q_start_pct: number;
+  q_end_pct: number;
+}
+
+export interface Trend {
+  current: number;
+  previous: number;
+  direction: 'up' | 'down' | '';
+  change: number;
+}
