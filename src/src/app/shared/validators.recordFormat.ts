@@ -5,6 +5,8 @@ export function recordFormatValidator(key: string): ValidatorFn {
     let expected_format: RegExp | undefined;
     if (key === 'time') {
       expected_format = /^(?:(?:(\d{0,3}):)?([0-5]?\d):)?([0-5]?\d)$/;
+    } else if (key === 'kg') {
+      expected_format = /^\d+(?:[.,]\d+)?$/; // comma or decimal though comma is ISO
     } else {
       expected_format = /^\d+$/;
     }

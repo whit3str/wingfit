@@ -243,14 +243,19 @@ class PRValueCreateOrUpdate(PRValueBase):
 
     @classmethod
     def value_matches_record_key(cls, key: ResultKeyEnum, value: str) -> bool:
-        if key == "kg" or key == "rep":  # kg or rep must be a positive integer
+        if key == "rep":  # rep must be a positive int
             return value.isdigit() and int(value) > 0
 
+        elif key == "kg": # kg must be a positive float
+            try:
+                test_float = float(value)
+                return test_float > 0
+            except ValueError:
+                return False
         if key == "time":  # time must be "[hh:]mm:ss"
             return bool(
                 re.fullmatch(r"^(?:(?:(\d{,3}):)?([0-5]?\d):)?([0-5]?\d)$", value)
             )
-
         return False
 
 
@@ -493,6 +498,6 @@ class HealthWatchDataRead(SQLModel):
             sleep_duration_deep=obj.sleep_duration_deep,
             sleep_duration_rem=obj.sleep_duration_rem,
             sleep_duration_awake=obj.sleep_duration_awake,
-            sleep_duration_total=obj.sleep_duration_light+obj.sleep_duration_deep+obj.sleep_duration_rem+obj.sleep_duration_awake,
+            sleep_duration_total=obj.sleep_duration_light+obj.sleep_duration_deep+obj.sleep_duration_rem,
             sleep_efficiency=obj.sleep_efficiency,
         )
