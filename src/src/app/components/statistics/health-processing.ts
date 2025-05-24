@@ -82,15 +82,6 @@ export function processHealthData(
       recovery: calculateTrend(recovery, previousrecovery),
       restingHR: calculateTrend(restingHR, previousrestingHR),
     };
-
-    console.log(
-      sleep,
-      previoussleep,
-      sleep.length,
-      previoussleep.length,
-      sleep.reduce((a, b) => a + b, 0),
-      previoussleep.reduce((a, b) => a + b, 0),
-    );
   }
 
   const labels = slice.map((d) =>
@@ -108,9 +99,11 @@ export function processHealthData(
         data: strain,
         yAxisID: 'yStrain',
         borderColor: '#3b82f6',
+        backgroundColor: '#3b82f61A',
         tension: 0.4,
-        fill: false,
+        fill: true,
         pointRadius: 0,
+        borderWidth: 0,
       },
       {
         label: 'Recovery',
@@ -120,6 +113,7 @@ export function processHealthData(
         tension: 0.4,
         fill: false,
         pointRadius: 0,
+        borderWidth: 2,
         segment: {
           borderColor: (ctx: any) => {
             const value = ctx.p0.parsed.y;

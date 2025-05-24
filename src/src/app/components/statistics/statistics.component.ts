@@ -11,11 +11,12 @@ import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { HealthwatchUploadModalComponent } from '../../modals/healthwatch-upload-modal/healthwatch-upload-modal.component';
 import { UtilsService } from '../../services/utils.service';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, map, tap } from 'rxjs';
+import { forkJoin, map, Observable, tap } from 'rxjs';
 import { processHealthData } from './health-processing';
 import { processDurationsData } from './duration-processing';
 import { StatGauge, Trend } from '../../types/stats';
-import { CommonModule } from '@angular/common';
+import { AsyncPipe, CommonModule } from '@angular/common';
+import { BlocCategory } from '../../types/bloc';
 
 @Component({
   selector: 'app-statistics',
@@ -29,6 +30,7 @@ import { CommonModule } from '@angular/common';
     ToolbarModule,
     ToggleButtonModule,
     CommonModule,
+    AsyncPipe,
   ],
   standalone: true,
   templateUrl: './statistics.component.html',
@@ -39,6 +41,8 @@ export class StatisticsComponent {
   today: Date = new Date();
   isMobile =
     window.screen.width < 768 || navigator.userAgent.indexOf('Mobi') > -1;
+
+  categories$: Observable<BlocCategory[]>;
 
   categoryDurationPerWeek: any;
   durationsByCategory: any;
@@ -68,20 +72,22 @@ export class StatisticsComponent {
     responsive: true,
     animation: false,
     plugins: {
-      legend: {
-        display: false,
-      },
       tooltip: {
+        enabled: false,
         callbacks: {
           label: (tooltipItem: any) => {
+            const value = tooltipItem.raw;
             return (
-              ` ${(tooltipItem.raw / 60) ^ 0}`.slice(-2) +
+              `${tooltipItem.label}: ` +
+              `${(value / 60) ^ 0}`.slice(-2) +
               'h' +
-              ('0' + (tooltipItem.raw % 60)).slice(-2)
+              ('0' + (value % 60)).slice(-2)
             );
           },
         },
+        external: this.customChartTooltip.bind(this),
       },
+      legend: { display: false },
     },
   };
 
@@ -109,9 +115,10 @@ export class StatisticsComponent {
       },
     },
     plugins: {
+      legend: { display: false },
       tooltip: {
+        enabled: false,
         mode: 'index',
-        intersect: false,
         itemSort: function (a: any, b: any) {
           return b.dataset.order - a.dataset.order;
         },
@@ -124,11 +131,12 @@ export class StatisticsComponent {
           label: (tooltipItem: any) => {
             const value = tooltipItem.raw;
             return value !== 0
-              ? ` ${tooltipItem.dataset.label}: ${value} min`
+              ? `${tooltipItem.dataset.label}: ${value}min`
               : '';
           },
         },
         filter: (tooltipItem: any) => tooltipItem.raw !== 0,
+        external: this.customChartTooltip.bind(this),
       },
     },
   };
@@ -138,11 +146,16 @@ export class StatisticsComponent {
     aspectRatio: 0.75,
     responsive: true,
     animation: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
     plugins: {
       tooltip: {
-        mode: 'index',
-        intersect: false,
+        enabled: false,
+        external: this.customChartTooltip.bind(this),
       },
+      legend: { display: false },
     },
     scales: {
       x: {
@@ -151,6 +164,10 @@ export class StatisticsComponent {
         },
       },
       yStrain: {
+        grid: {
+          display: false,
+        },
+        min: 0,
         type: 'linear',
         display: true,
         position: 'left',
@@ -199,6 +216,8 @@ export class StatisticsComponent {
 
       this.stackedGraphOptions = { ...this.stackedGraphOptions, ...options };
     }
+
+    this.categories$ = this.apiService.getCategories();
     this.getData();
   }
 
@@ -225,6 +244,51 @@ export class StatisticsComponent {
         this.restingHRTrend = result.trends.restingHR;
       }
     });
+  }
+
+  customChartTooltip(context: any) {
+    const { chart, tooltip } = context;
+
+    let tooltipEl = document.getElementById(
+      'chartjs-tooltip',
+    ) as HTMLDivElement;
+
+    if (!tooltipEl) {
+      tooltipEl = document.createElement('div');
+      tooltipEl.id = 'chartjs-tooltip';
+      tooltipEl.className = 'chartjs-tooltip';
+      document.body.appendChild(tooltipEl);
+    }
+
+    if (tooltip.opacity === 0) {
+      tooltipEl.style.opacity = '0';
+      tooltipEl.style.pointerEvents = 'none';
+      return;
+    }
+
+    const title = tooltip.title?.[0] ?? '';
+    const items = tooltip.dataPoints ?? [];
+
+    let innerHtml = `<div class="tooltip-container">
+      <div class="tooltip-header">${title}</div>`;
+
+    items.map(
+      (item: any, index: number) =>
+        (innerHtml += `
+      <div class="tooltip-row">
+        <span class="tooltip-color" style="background:${item.element.options.borderColor}"></span>
+        <span class="tooltip-label">${tooltip.body[index].lines.flat()[0].split(':')[0]}</span>
+        <span class="tooltip-value">${tooltip.body[index].lines.flat()[0].split(':')[1]}</span>
+      </div>
+    `),
+    );
+
+    tooltipEl.innerHTML = innerHtml;
+    tooltipEl.style.opacity = '1';
+    tooltipEl.style.position = 'absolute';
+    tooltipEl.style.left = `${chart.canvas.getBoundingClientRect().left + window.scrollX + tooltip.caretX}px`;
+    tooltipEl.style.top = `${chart.canvas.getBoundingClientRect().top + window.scrollY + tooltip.caretY}px`;
+    tooltipEl.style.pointerEvents = 'none';
   }
 
   getData() {

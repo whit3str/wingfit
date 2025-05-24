@@ -367,6 +367,22 @@
     <div class="p-4">
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-bold text-gray-900 mb-0">Weekly workouts duration</h1>
+
+        <div class="flex gap-2 items-center select-none">
+          @defer {
+          @for (c of (categories$ | async); track c.id) {
+          <div class="px-3 py-1 rounded-md dark:bg-white/10 inline-flex items-center gap-2"
+            [style.backgroundColor]="c.color + '1A'">
+            <span class="w-2 h-2 rounded-md" [style.backgroundColor]="c.color"></span>
+            <span class="text-sm font-medium text-surface-950 dark:text-surface-0 capitalize">{{ c.name }}</span>
+          </div>
+          }
+          } @placeholder (minimum 0.7s) {
+          @for (_ of [1,2,3,4]; track _) {
+          <p-skeleton height="2rem" width="6rem"></p-skeleton>
+          }
+          }
+        </div>
       </div>
 
       <div class="mt-4">
@@ -398,6 +414,18 @@
     <div class="p-4">
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-bold text-gray-900 mb-0">Whoop Strain / Recovery</h1>
+
+        <div class="flex gap-2 items-center select-none">
+          <div class="px-3 py-1 rounded-md bg-[#3b82f6]/10 dark:bg-white/10 inline-flex items-center gap-2">
+            <span class="w-2 h-2 rounded-md bg-[#3b82f6]"></span>
+            <span class="text-sm font-medium text-surface-950 dark:text-surface-0">Strain</span>
+          </div>
+
+          <div class="px-3 py-1 rounded-md bg-[#15803d]/10 dark:bg-white/10 inline-flex items-center gap-2">
+            <span class="w-2 h-2 rounded-md bg-[#15803d]"></span>
+            <span class="text-sm font-medium text-surface-950 dark:text-surface-0">Recovery</span>
+          </div>
+        </div>
       </div>
 
       <div class="mt-4">
