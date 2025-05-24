@@ -286,8 +286,22 @@ export class StatisticsComponent {
     tooltipEl.innerHTML = innerHtml;
     tooltipEl.style.opacity = '1';
     tooltipEl.style.position = 'absolute';
-    tooltipEl.style.left = `${chart.canvas.getBoundingClientRect().left + window.scrollX + tooltip.caretX}px`;
-    tooltipEl.style.top = `${chart.canvas.getBoundingClientRect().top + window.scrollY + tooltip.caretY}px`;
+
+    const canvasRect = chart.canvas.getBoundingClientRect();
+    const tooltipRect = tooltipEl.getBoundingClientRect();
+
+    const tooltipPositionX = canvasRect.left + window.scrollX + tooltip.caretX;
+    const tooltipPositionY = canvasRect.top + window.scrollY + tooltip.caretY;
+
+    const overflowRight =
+      tooltipPositionX + tooltipRect.width >
+      canvasRect.left + canvasRect.width + window.scrollX;
+    if (overflowRight) {
+      tooltipEl.style.left = `${tooltipPositionX - tooltipRect.width}px`;
+    } else {
+      tooltipEl.style.left = `${tooltipPositionX}px`;
+    }
+    tooltipEl.style.top = `${tooltipPositionY}px`;
     tooltipEl.style.pointerEvents = 'none';
   }
 
