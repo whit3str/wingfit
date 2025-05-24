@@ -59,9 +59,7 @@ export class AuthService {
 
   isLoggedIn(): Observable<boolean> {
     if (this.loggedUser) return of(true);
-
     if (this.accessToken) return of(true);
-
     return of(false);
   }
 
@@ -72,7 +70,7 @@ export class AuthService {
       })
       .pipe(
         tap((tokens: Token) => {
-          if (tokens) this.storeTokens(tokens);
+          this.accessToken = tokens.access_token;
         }),
       );
   }
