@@ -66,6 +66,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+Path(settings.ASSETS_FOLDER).mkdir(parents=True, exist_ok=True) # Ensure ASSETS_FOLDER exists
 app.mount("/api/assets", StaticFiles(directory=settings.ASSETS_FOLDER), name="static")
 app.engine = create_engine(
     f"sqlite:///{settings.SQLITE_FILE}", connect_args={"check_same_thread": False}
