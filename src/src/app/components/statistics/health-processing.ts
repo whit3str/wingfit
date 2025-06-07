@@ -1,9 +1,11 @@
+import { Bloc } from '../../types/bloc';
 import { HealthWatchData, StatGauge, Trend } from '../../types/stats';
 import { calculateTrend, getQuartile } from './stats-utils';
 
 export function processHealthData(
   data: HealthWatchData[],
   latestOnly: boolean,
+  notes: Bloc[],
 ) {
   let ret = {
     averages: {
@@ -84,16 +86,42 @@ export function processHealthData(
     };
   }
 
+  // Normalize labels
   const labels = slice.map((d) =>
     new Date(d.cdate).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
+      year: '2-digit',
     }),
   );
+
+  // Parse notes
+  const parsed_notes = notes.map((note) => ({
+    date: new Date(note.cdate).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: '2-digit',
+    }),
+    content: note.content,
+  }));
 
   const strainRecoveryComboGraph = {
     labels,
     datasets: [
+      {
+        label: 'Notes',
+        data: parsed_notes
+          .filter((note) => labels.indexOf(note.date) > -1)
+          .map((note) => ({
+            x: note.date,
+            y: 0,
+            content: note.content,
+          })),
+        pointBackgroundColor: '#909090',
+        pointRadius: 10,
+        showLine: false,
+        yAxisID: 'yNotes',
+      },
       {
         label: 'Strain',
         data: strain,

@@ -432,6 +432,10 @@ export class ApiService {
   }
 
   // Stats endpoints
+  getNoteBlocs(): Observable<Bloc[]> {
+    return this.httpClient.get<Bloc[]>(this.apiBaseUrl + '/stats/notes');
+  }
+
   getWeeklyDurationTotal(year: number): Observable<WeeklyDurationTotal[]> {
     let params = new HttpParams();
     params = params.set('year', year);

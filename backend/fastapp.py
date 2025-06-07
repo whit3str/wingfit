@@ -1482,6 +1482,21 @@ def delete_user_api_token(
     return {}
 
 
+@app.get("/api/stats/notes", response_model=list[BlocRead])
+def get_blocs_note(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]) -> list:
+    category = session.exec(
+        select(BlocCategory)
+        .where(BlocCategory.user == current_user)
+        .where(BlocCategory.name == 'note')
+        .options(selectinload(BlocCategory.blocs))
+    ).one_or_none()
+
+    if not category:
+        return []
+
+    return [BlocRead.serialize(c) for c in category.blocs]
+
+
 @app.get("/api/stats/week_duration_total")
 def get_total_duration_per_week(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)], year: str | int | None = None) -> list:
     year = int(year) if year else datetime.now().year

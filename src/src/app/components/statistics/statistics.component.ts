@@ -16,7 +16,7 @@ import { processHealthData } from './health-processing';
 import { processDurationsData } from './duration-processing';
 import { StatGauge, Trend } from '../../types/stats';
 import { AsyncPipe, CommonModule } from '@angular/common';
-import { BlocCategory } from '../../types/bloc';
+import { Bloc, BlocCategory } from '../../types/bloc';
 
 @Component({
   selector: 'app-statistics',
@@ -66,6 +66,8 @@ export class StatisticsComponent {
   hrvTrend: Trend | undefined;
   strainTrend: Trend | undefined;
   recoveryTrend: Trend | undefined;
+
+  notes: Bloc[] = [];
 
   pieGraphOptions = {
     maintainAspectRatio: false,
@@ -175,6 +177,10 @@ export class StatisticsComponent {
           color: '#3b82f6',
         },
       },
+      yNotes: {
+        display: false,
+        min: 0,
+      },
       yRecovery: {
         type: 'linear',
         display: true,
@@ -223,7 +229,7 @@ export class StatisticsComponent {
 
   loadHealthData() {
     this.apiService.getHealthWatchData(this.year).subscribe((data) => {
-      const result = processHealthData(data, this.latestOnly);
+      const result = processHealthData(data, this.latestOnly, this.notes);
 
       this.averageSleepDuration = result.averages.sleep;
       this.averageStrain = result.averages.strain;
@@ -272,16 +278,26 @@ export class StatisticsComponent {
     let innerHtml = `<div class="tooltip-container">
       <div class="tooltip-header">${title}</div>`;
 
-    items.map(
-      (item: any, index: number) =>
-        (innerHtml += `
-      <div class="tooltip-row">
-        <span class="tooltip-color" style="background:${item.element.options.borderColor}"></span>
-        <span class="tooltip-label">${tooltip.body[index].lines.flat()[0].split(':')[0]}</span>
-        <span class="tooltip-value">${tooltip.body[index].lines.flat()[0].split(':')[1]}</span>
-      </div>
-    `),
-    );
+    let itemNotes: any = undefined;
+    items.map((item: any, index: number) => {
+      if (item.raw?.content) {
+        itemNotes = item;
+        return;
+      }
+
+      innerHtml += `
+        <div class="tooltip-row">
+          <span class="tooltip-color" style="background:${item.element.options.borderColor}"></span>
+          <span class="tooltip-label">${tooltip.body[index].lines.flat()[0].split(':')[0]}</span>
+          <span class="tooltip-value">${tooltip.body[index].lines.flat()[0].split(':')[1]}</span>
+        </div>
+      `;
+    });
+
+    // Append the note
+    if (itemNotes) {
+      innerHtml += `<div class="tooltip-row tooltip-row-border" style="border-color: ${itemNotes.element.options.borderColor}">${itemNotes.raw?.content}</div>`;
+    }
 
     tooltipEl.innerHTML = innerHtml;
     tooltipEl.style.opacity = '1';
@@ -310,17 +326,23 @@ export class StatisticsComponent {
       total: this.apiService.getWeeklyDurationTotal(this.year),
       health: this.apiService.getHealthWatchData(this.year),
       durations: this.apiService.getWeeklyDuration(this.year),
+      notes: this.apiService.getNoteBlocs(),
     })
       .pipe(
-        tap(({ total }) => {
+        tap(({ total, notes }) => {
           this.totalWorkoutsHours = total.reduce(
             (sum, e) => sum + e.duration,
             0,
           );
+          this.notes = notes;
         }),
         map(({ health, durations }) => {
           return {
-            healthResult: processHealthData(health, this.latestOnly),
+            healthResult: processHealthData(
+              health,
+              this.latestOnly,
+              this.notes,
+            ),
             durationsResult: processDurationsData(durations),
           };
         }),
