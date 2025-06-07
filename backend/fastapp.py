@@ -1225,7 +1225,9 @@ def register(req: LoginRegisterModel, session: SessionDep) -> Token:
     if user:
         raise HTTPException(status_code=409, detail="Username already exists")
 
-    new_user = User(username=req.username, password=hash_password(req.password))
+    is_first = not session.execute(select(User).limit(1)).first()
+
+    new_user = User(username=req.username, password=hash_password(req.password), is_su=is_first)
     session.add(new_user)
     session.commit()
 

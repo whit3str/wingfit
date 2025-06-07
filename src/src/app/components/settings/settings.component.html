@@ -1,11 +1,13 @@
-<p-toolbar [style]="{ border: '0' }" [styleClass]="'md:!px-8 !bg-slate-50 dark:!bg-surface-900'">
-  <ng-template #start></ng-template>
-
-  <ng-template #end>
-    @if(user?.is_su) { <p-button text severity="danger" icon="pi pi-shield" [routerLink]="'/adminp'"
-      label="Admin panel" /> }
-  </ng-template>
-</p-toolbar>
+@if (user?.is_su) {
+  <p-toolbar [style]="{ border: '0' }" [styleClass]="'md:!px-8 !bg-slate-50 dark:!bg-surface-900'">
+    <ng-template #start></ng-template>
+  
+    <ng-template #end>
+      @if(user?.is_su) { <p-button text severity="danger" icon="pi pi-shield" [routerLink]="'/adminp'"
+        label="Admin panel" /> }
+    </ng-template>
+  </p-toolbar>
+}
 
 <div class="max-w-7xl mx-auto px-4 md:px-0 m-4">
   <p-card>
