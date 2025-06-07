@@ -11,6 +11,7 @@ import { StatisticsComponent } from './components/statistics/statistics.componen
 import { AssistantComponent } from './components/assistant/assistant.component';
 import { AuthGuard } from './services/auth.guard';
 import { StashComponent } from './components/stash/stash.component';
+import { AdminPanelComponent } from './components/admin-panel/admin-panel.component';
 
 export const routes: Routes = [
   {
@@ -59,6 +60,12 @@ export const routes: Routes = [
         path: 'stash',
         component: StashComponent,
         title: 'Wingfit - Stash',
+      },
+      {
+        path: 'adminp',
+        component: AdminPanelComponent,
+        title: 'Wingfit - Admin Panel',
+        // TODO: CanActivate(is_su)
       },
 
       {

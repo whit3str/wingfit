@@ -13,6 +13,7 @@ import {
   HealthWatchData,
   WeeklyDurationTotal,
 } from '../types/stats';
+import { Token } from './auth.service';
 
 @Injectable({
   providedIn: 'root',
@@ -387,6 +388,46 @@ export class ApiService {
     return this.httpClient.delete<{}>(
       this.apiBaseUrl +
         `/programs/${program_id}/steps/${step_id}/blocs/${bloc_id}`,
+    );
+  }
+
+  updatePassword(current: string, _new: string): Observable<{}> {
+    return this.httpClient.post<{}>(this.apiBaseUrl + `/auth/update_password`, {
+      current: current,
+      new: _new,
+    });
+  }
+
+  // Admin P endpoints
+  getUsers(): Observable<User[]> {
+    return this.httpClient.get<User[]>(this.apiBaseUrl + '/admin/users');
+  }
+
+  adminExportData(): Observable<any> {
+    return this.httpClient.get<any>(this.apiBaseUrl + '/admin/export');
+  }
+
+  deleteUser(username: string): Observable<{}> {
+    return this.httpClient.delete(this.apiBaseUrl + `/admin/users/${username}`);
+  }
+
+  addUser(data: { username: string; password: string }): Observable<User> {
+    return this.httpClient.post<User>(this.apiBaseUrl + '/admin/users', data);
+  }
+
+  resetUserPassword(username: string, _new: string): Observable<{}> {
+    return this.httpClient.put(
+      this.apiBaseUrl + `/admin/users/${username}/reset`,
+      {
+        new: _new,
+      },
+    );
+  }
+
+  toggleUserActive(username: string): Observable<User> {
+    return this.httpClient.put<User>(
+      this.apiBaseUrl + `/admin/users/${username}/toggle_active`,
+      {},
     );
   }
 

@@ -66,8 +66,8 @@ export function processHealthData(
     restingHR: undefined,
   };
 
-  //Trends only for latestOnly option
-  if (latestOnly) {
+  //Trends only for latestOnly option, if 2x LATEST_COUNT(30d) sample size
+  if (latestOnly && sorted.length > 2 * LATEST_COUNT) {
     const previous_data = sorted.slice(-LATEST_COUNT * 2, -LATEST_COUNT);
     const previoussleep = previous_data.map((d) => d.sleep_duration_total);
     const previoushrv = previous_data.map((d) => d.hrv);

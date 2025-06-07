@@ -12,13 +12,15 @@ import { ClipboardModule } from '@angular/cdk/clipboard';
 })
 export class SettingsViewTokenComponent {
   token: string = '';
+  message: string = '';
 
   constructor(
     private ref: DynamicDialogRef,
     private config: DynamicDialogConfig,
   ) {
     if (this.config.data) {
-      this.token = this.config.data;
+      this.token = this.config.data.token;
+      this.message = this.config.data.message;
     }
   }
 

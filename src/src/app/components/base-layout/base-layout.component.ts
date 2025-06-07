@@ -55,35 +55,36 @@ export class BaseLayoutComponent {
       },
     };
 
+    const baseItems: MenuItem[] = [
+      {
+        label: 'History',
+        icon: 'pi pi-history',
+        route: '/history',
+      },
+      {
+        label: 'Stash',
+        icon: 'pi pi-th-large',
+        route: '/stash',
+      },
+      {
+        label: 'Settings',
+        icon: 'pi pi-cog',
+        route: '/settings',
+      },
+      {
+        label: 'Logout',
+        icon: 'pi pi-sign-out',
+        command: () => {
+          this.authService.logout();
+        },
+      },
+    ];
+
     this.userMenuItems = [
       {
         label:
           this.loggedUser.charAt(0).toUpperCase() + this.loggedUser.slice(1),
-        items: [
-          lightDarkItem,
-          {
-            label: 'History',
-            icon: 'pi pi-history',
-            route: '/history',
-          },
-          {
-            label: 'Stash',
-            icon: 'pi pi-th-large',
-            route: '/stash',
-          },
-          {
-            label: 'Settings',
-            icon: 'pi pi-cog',
-            route: '/settings',
-          },
-          {
-            label: 'Logout',
-            icon: 'pi pi-sign-out',
-            command: () => {
-              this.authService.logout();
-            },
-          },
-        ],
+        items: [lightDarkItem, ...baseItems],
       },
     ];
   }

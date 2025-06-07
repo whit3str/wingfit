@@ -1,13 +1,11 @@
 import base64
-import random
-import re
-import httpx
+import tempfile
 from datetime import date
 from io import BytesIO
-import tempfile
 from pathlib import Path
 from uuid import uuid4
 
+import httpx
 import requests
 from fastapi import HTTPException
 from PIL import Image
@@ -41,7 +39,7 @@ def remove_image(path: str):
     try:
         Path(assets_folder_path() / path).unlink()
     except FileNotFoundError:
-        raise Exception(f"Image not found")
+        raise Exception("Image not found")
     except OSError as e:
         raise Exception("Error deleting image:", e)
 
@@ -86,7 +84,7 @@ def check_update():
 
         return None
 
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         raise HTTPException(status_code=503, detail="Couldn't verify for update")
 
 

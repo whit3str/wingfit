@@ -4,57 +4,43 @@ import json
 import shutil
 import tempfile
 import zipfile
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Literal
 
 import jwt
 from argon2 import PasswordHasher
 from argon2 import exceptions as argon_exceptions
-from fastapi import (
-    Body,
-    Depends,
-    FastAPI,
-    File,
-    Form,
-    Header,
-    HTTPException,
-    Request,
-    Response,
-    UploadFile,
-)
+from fastapi import (Body, Depends, FastAPI, File, Form, Header, HTTPException,
+                     Request, UploadFile)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import extract
-from sqlmodel import (
-    Field,
-    Relationship,
-    Session,
-    SQLModel,
-    create_engine,
-    delete,
-    func,
-    select,
-)
+from sqlmodel import Session, SQLModel, create_engine, delete, func, select
 
 from . import __version__
-from .models import *
-from .utils import (
-    assets_folder_path,
-    b64_decode,
-    check_update,
-    download_file,
-    generate_api_token,
-    generate_filename,
-    parse_str_or_date_to_date,
-    remove_image,
-    save_image,
-)
+from .models import (PR, Bloc, BlocCategory, BlocCategoryBase,
+                     BlocCategoryRead, BlocCreate, BlocRead, BlocResult,
+                     BlocResultBase, BlocResultRead, BlocUpdate,
+                     HealthWatchData, HealthWatchDataRead, Image,
+                     LoginRegisterModel, PRCreate, Program, ProgramCreate,
+                     ProgramRead, ProgramReadComplete, ProgramStep,
+                     ProgramStepBloc, ProgramStepBlocCreate,
+                     ProgramStepBlocRead, ProgramStepBlocUpdate,
+                     ProgramStepCreate, ProgramStepRead, ProgramStepUpdate,
+                     ProgramStepWithBlocsRead, ProgramUpdate, PRRead, PRUpdate,
+                     PRValue, PRValueCreateOrUpdate, PRValueRead,
+                     ResultKeyEnum, Settings, Stash, StashBase, StashRead,
+                     Token, UpdateUserPassword, User, UserRead)
+from .utils import (assets_folder_path, b64_decode, check_update,
+                    download_file, generate_api_token, generate_filename,
+                    parse_str_or_date_to_date, remove_image, save_image)
 
 settings = Settings()
 app = FastAPI()
@@ -72,6 +58,12 @@ app.mount("/api/assets", StaticFiles(directory=settings.ASSETS_FOLDER), name="st
 app.engine = create_engine(
     f"sqlite:///{settings.SQLITE_FILE}", connect_args={"check_same_thread": False}
 )
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 @app.middleware("http")
 async def NotFound_to_SPA(request: Request, call_next):
@@ -195,9 +187,12 @@ def init_user_data(session: SessionDep, username: str):
     session.commit()
 
 
-def api_token_to_user(session: SessionDep, api_token: str) -> User:
+def api_token_to_user(session: SessionDep, api_token: str) -> User | None:
+    if not api_token:
+        return None
+
     user = session.exec(
-        select(User).where(User.api_token != None, User.api_token == api_token)
+        select(User).where(User.api_token == api_token)
     ).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid Token")
@@ -232,6 +227,9 @@ def post_stash(
     X_Api_Token: Annotated[str | None, Header()] = None,
 ) -> dict:
     user = api_token_to_user(session, X_Api_Token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     new_stash = Stash(content=stash_data.content, user=user.username)
     session.add(new_stash)
     session.commit()
@@ -254,7 +252,7 @@ def delete_stash(
 
 
 @app.delete("/api/stash")
-def delete_stash(
+def empty_stash(
     session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]
 ) -> dict:
     session.exec(delete(Stash).where(Stash.user == current_user))
@@ -524,14 +522,14 @@ def post_pr(
                     parsed_date = parse_str_or_date_to_date(value.cdate)
                     if parsed_date > date.today():
                         raise HTTPException(
-                            status_code=400, detail=f"PR Value cannot be in the future."
+                            status_code=400, detail="PR Value cannot be in the future."
                         )
 
                     if not PRValueCreateOrUpdate.value_matches_record_key(
                         new_pr.key, value.value
                     ):
                         raise HTTPException(
-                            status_code=400, detail=f"Invalid value for PR"
+                            status_code=400, detail="Invalid value for PR"
                         )
 
                     pr_values.append(
@@ -611,13 +609,13 @@ def post_pr_value(
             parsed_date = parse_str_or_date_to_date(value.cdate)
             if parsed_date > date.today():
                 raise HTTPException(
-                    status_code=400, detail=f"PR Value cannot be in the future"
+                    status_code=400, detail="PR Value cannot be in the future"
                 )
 
             if not PRValueCreateOrUpdate.value_matches_record_key(
                 db_pr.key, value.value
             ):
-                raise HTTPException(status_code=400, detail=f"Invalid value for PR")
+                raise HTTPException(status_code=400, detail="Invalid value for PR")
 
             existing_value = session.exec(
                 select(PRValue).where(
@@ -661,7 +659,7 @@ def put_pr_value(
         )
 
     if not PRValueCreateOrUpdate.value_matches_record_key(db_pr.key, value_data.value):
-        raise HTTPException(status_code=400, detail=f"Invalid value for PR")
+        raise HTTPException(status_code=400, detail="Invalid value for PR")
 
     value_data = value_data.model_dump(exclude_unset=True)
 
@@ -729,12 +727,12 @@ async def upload_program(
         ProgramCreate(**data)  # Content format test
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON format")
-    except ValidationError as e:
+    except ValidationError:
         raise HTTPException(
-            status_code=422, detail=f"File does not appear to be a Program"
+            status_code=422, detail="File does not appear to be a Program"
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
     existing_program = session.exec(
         select(Program).where(
@@ -1200,10 +1198,16 @@ def delete_program_step_bloc(
 
 @app.post("/api/auth/login", response_model=Token)
 def login(req: LoginRegisterModel, session: SessionDep) -> Token:
+    if settings.AUTH_METHOD == "oidc":
+        raise HTTPException(status_code=400, detail="Local Authentication is disabled")
+
     user = session.get(User, req.username)
     exception = HTTPException(status_code=401, detail="Could not validate credentials")
 
     if not user:
+        raise exception
+
+    if not user.is_active:
         raise exception
 
     if not verify_password(req.password, user.password):
@@ -1214,6 +1218,9 @@ def login(req: LoginRegisterModel, session: SessionDep) -> Token:
 
 @app.post("/api/auth/register", response_model=Token)
 def register(req: LoginRegisterModel, session: SessionDep) -> Token:
+    if settings.AUTH_METHOD == "oidc":
+        raise HTTPException(status_code=400, detail="Local Authentication is disabled")
+
     user = session.get(User, req.username)
     if user:
         raise HTTPException(status_code=409, detail="Username already exists")
@@ -1225,6 +1232,22 @@ def register(req: LoginRegisterModel, session: SessionDep) -> Token:
     init_user_data(session, new_user.username)  # Init the user data
 
     return create_tokens(data={"sub": new_user.username})
+
+
+@app.post("/api/auth/update_password")
+def auth_update_password(data: UpdateUserPassword, session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]):
+    db_user = session.get(User, current_user)
+
+    try:
+        verify_password(data.current, db_user.password)
+    except HTTPException:
+        raise HTTPException(status_code=403, detail="Incorrect password")
+
+    db_user.password = hash_password(data.new)
+    session.add(db_user)
+    session.commit()
+
+    return {}
 
 
 @app.post("/api/auth/refresh")
@@ -1247,16 +1270,14 @@ def refresh_token(refresh_token: str = Body(..., embed=True)):
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Refresh token expired")
-    except jwt.PyJWTError as exc:
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 
 @app.get("/api/settings", response_model=UserRead)
-def get_user_settings(
-    session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]
-) -> UserRead:
-    user = session.get(User, current_user)
-    return UserRead.serialize(user)
+def get_user_settings(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]) -> UserRead:
+    db_user = session.get(User, current_user)
+    return UserRead.serialize(db_user)
 
 
 @app.get("/api/export")
@@ -1266,6 +1287,7 @@ def export_user_data(
     data = {
         "_": {
             "at": datetime.timestamp(datetime.now()),
+            "version": __version__
         },
         "categories": get_categories(session, current_user),
         "blocs": [
@@ -1287,6 +1309,132 @@ def export_user_data(
             data["images"][im.id] = base64.b64encode(f.read())
 
     return data
+
+
+@app.get("/api/admin/users", response_model=list[UserRead])
+def admin_list_users(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]):
+    req_user = session.get(User, current_user)
+    if not req_user.is_su:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    users = session.exec(select(User)).all()
+    return [UserRead.serialize(u) for u in users]
+
+
+@app.put("/api/admin/users/{username}/reset")
+def admin_reset_user_password(username: str, session: SessionDep, current_user: Annotated[str, Depends(get_current_user)], new: str = Body(..., embed=True)):
+    req_user = session.get(User, current_user)
+    if not req_user.is_su:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db_user = session.get(User, username)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if db_user.is_su:
+        raise HTTPException(status_code=403, detail="You cannot reset an admin's password")
+
+    db_user.password = hash_password(new)
+    session.add(db_user)
+    session.commit()
+
+    return {}
+
+
+
+@app.get("/api/admin/export")
+def admin_export_data(session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]):
+    req_user = session.get(User, current_user)
+    if not req_user.is_su:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    data = {}
+    
+    users = session.exec(select(User)).all()
+    for user in users:
+        username = user.username
+        print(username)
+        data[username] = {
+            "_": {
+                "at": datetime.timestamp(datetime.now()),
+                "version": __version__
+            },
+            "categories": get_categories(session, username),
+            "blocs": [
+                BlocRead.serialize(bloc)
+                for bloc in session.exec(select(Bloc).filter(Bloc.user == username))
+            ],
+            "images": {},
+            "programs": [
+                export_program(program.id, session, username)
+                for program in session.exec(
+                    select(Program).filter(Program.user == username)
+                )
+            ],
+        }
+
+        images = session.exec(select(Image).where(Image.user == username))
+        for im in images:
+            with open(Path(settings.ASSETS_FOLDER) / im.filename, "rb") as f:
+                data[username]["images"][im.id] = base64.b64encode(f.read())
+
+    return data
+
+
+@app.put("/api/admin/users/{username}/toggle_active", response_model=UserRead)
+def admin_toggle_user_active(username: str, session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]):
+    req_user = session.get(User, current_user)
+    if not req_user.is_su:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    db_user = session.get(User, username)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if db_user.is_su:
+        raise HTTPException(status_code=403, detail="You cannot disable an admin")
+
+    db_user.is_active = not db_user.is_active
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+
+    return UserRead.serialize(db_user)
+
+
+@app.delete("/api/admin/users/{username}")
+def admin_delete_user(username: str, session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]):
+    req_user = session.get(User, current_user)
+    if not req_user.is_su:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db_user = session.get(User, username)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if db_user.is_su:
+        raise HTTPException(status_code=403, detail="You cannot delete an admin")
+
+    session.delete(db_user)
+    session.commit()
+
+    return {}
+
+
+@app.post("/api/admin/users", response_model=UserRead)
+def admin_add_user(req: LoginRegisterModel, session: SessionDep, current_user: Annotated[str, Depends(get_current_user)]):
+    req_user = session.get(User, current_user)
+    if not req_user.is_su:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    user = session.get(User, req.username)
+    if user:
+        raise HTTPException(status_code=409, detail="Username already exists")
+
+    new_user = User(username=req.username, password=hash_password(req.password))
+    session.add(new_user)
+    session.commit()
+
+    init_user_data(session, new_user.username)  # Init the user data
+
+    return UserRead.serialize(new_user)
 
 
 @app.get("/api/settings/checkversion")

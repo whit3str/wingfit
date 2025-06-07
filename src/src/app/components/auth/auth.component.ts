@@ -47,7 +47,15 @@ export class AuthComponent {
       this.route.snapshot.queryParams['redirectURL'] || '/home';
 
     this.authForm = this.fb.group({
-      username: ['', { validators: Validators.required }],
+      username: [
+        '',
+        {
+          validators: Validators.compose([
+            Validators.pattern(/^[a-zA-Z0-9_-]{1,19}$/),
+            Validators.required,
+          ]),
+        },
+      ],
       password: ['', { validators: Validators.required }],
     });
   }

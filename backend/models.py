@@ -1,16 +1,23 @@
 import re
 import secrets
 from datetime import date, datetime
-from decimal import Decimal
 from enum import Enum
-from typing import Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, constr
 from pydantic_settings import BaseSettings
-from sqlmodel import JSON, Field, Relationship, Session, SQLModel, create_engine, select
+from sqlmodel import Field, Relationship, SQLModel
 
 
 class Settings(BaseSettings):
+    AUTH_METHOD: str = "local"  # "local" or "oidc"
+
+    OIDC_CLIENT_ID: str = ""
+    OIDC_CLIENT_SECRET: str = ""
+    OIDC_AUTH_URL: str = ""
+    OIDC_TOKEN_URL: str = ""
+    OIDC_USERINFO_URL: str = ""
+    OIDC_REDIRECT_URI: str = ""
+
     ASSETS_FOLDER: str = "storage/assets"
     FRONTEND_FOLDER: str = "frontend"
     SQLITE_FILE: str = "storage/wingfit.sqlite"
@@ -18,7 +25,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 1440
+
     OPENAI_API_KEY: str = ""
+    OPEN_AI_HOST: str = ""
 
     class Config:
         env_file = "storage/config.yml"
@@ -31,7 +40,7 @@ class ResultKeyEnum(str, Enum):
 
 
 class LoginRegisterModel(BaseModel):
-    username: str
+    username: constr(min_length=1, max_length=19, pattern=r"^[a-zA-Z0-9_-]+$")
     password: str
 
 
@@ -54,12 +63,19 @@ class Image(ImageBase, table=True):
     programs: list["Program"] | None = Relationship(back_populates="image")
 
 
+class UpdateUserPassword(BaseModel):
+    current: str
+    new: str
+
+
 class UserBase(SQLModel): ...
 
 
 class User(UserBase, table=True):
     username: str = Field(primary_key=True)
     password: str
+    is_active: bool = True
+    is_su: bool = False
     last_connect: datetime = Field(default_factory=datetime.utcnow)
     api_token: str | None = None
 
@@ -68,6 +84,8 @@ class UserRead(UserBase):
     username: str
     last_connect: datetime
     api_token: bool = False
+    is_active: bool
+    is_su: bool
 
     @classmethod
     def serialize(cls, obj: User) -> "UserRead":
@@ -75,6 +93,8 @@ class UserRead(UserBase):
             username=obj.username,
             last_connect=obj.last_connect,
             api_token=True if obj.api_token else False,
+            is_active=obj.is_active,
+            is_su=obj.is_su,
         )
 
 
@@ -246,7 +266,7 @@ class PRValueCreateOrUpdate(PRValueBase):
         if key == "rep":  # rep must be a positive int
             return value.isdigit() and int(value) > 0
 
-        elif key == "kg": # kg must be a positive float
+        elif key == "kg":  # kg must be a positive float
             try:
                 test_float = float(value)
                 return test_float > 0
@@ -355,7 +375,7 @@ class ProgramStep(ProgramStepBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     cdate: date = Field(default_factory=lambda: datetime.utcnow().date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
-    program_id: int = Field(foreign_key="program.id")
+    program_id: int = Field(foreign_key="program.id", ondelete="CASCADE")
     program: Program | None = Relationship(back_populates="steps")
 
     blocs: list["ProgramStepBloc"] = Relationship(
@@ -451,7 +471,7 @@ class ProgramStepBlocRead(ProgramStepBlocBase):
 class HealthWatchData(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     cdate: date = Field(index=True)
-    user: str = Field(foreign_key="user.username")
+    user: str = Field(foreign_key="user.username", ondelete="CASCADE")
     recovery: int
     resting_hr: int
     hrv: int
@@ -464,6 +484,7 @@ class HealthWatchData(SQLModel, table=True):
     sleep_duration_rem: int
     sleep_duration_awake: int
     sleep_efficiency: int
+
 
 class HealthWatchDataRead(SQLModel):
     id: int
@@ -480,8 +501,8 @@ class HealthWatchDataRead(SQLModel):
     sleep_duration_rem: int
     sleep_duration_awake: int
     sleep_efficiency: int
-    sleep_duration_total: int # Injected, computed
-    
+    sleep_duration_total: int  # Injected, computed
+
     @classmethod
     def serialize(cls, obj: HealthWatchData) -> "HealthWatchDataRead":
         return cls(
@@ -498,6 +519,8 @@ class HealthWatchDataRead(SQLModel):
             sleep_duration_deep=obj.sleep_duration_deep,
             sleep_duration_rem=obj.sleep_duration_rem,
             sleep_duration_awake=obj.sleep_duration_awake,
-            sleep_duration_total=obj.sleep_duration_light+obj.sleep_duration_deep+obj.sleep_duration_rem,
+            sleep_duration_total=obj.sleep_duration_light
+            + obj.sleep_duration_deep
+            + obj.sleep_duration_rem,
             sleep_efficiency=obj.sleep_efficiency,
         )

@@ -21,12 +21,13 @@ import {
 import { SkeletonModule } from 'primeng/skeleton';
 import { forkJoin, Observable } from 'rxjs';
 import {
-  FormBuilder,
-  FormGroup,
   FormsModule,
   ReactiveFormsModule,
-  Validators,
 } from '@angular/forms';
+import { ToolbarModule } from 'primeng/toolbar';
+import { RouterLink } from '@angular/router';
+import { SettingsPasswordModalComponent } from '../../modals/settings-password-modal/settings-password-modal.component';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-settings',
@@ -40,6 +41,8 @@ import {
     SkeletonModule,
     FloatLabelModule,
     PopoverModule,
+    ToolbarModule,
+    RouterLink,
   ],
   standalone: true,
   templateUrl: './settings.component.html',
@@ -57,7 +60,7 @@ export class SettingsComponent {
   constructor(
     private apiService: ApiService,
     private utilsService: UtilsService,
-    private fb: FormBuilder,
+    private authService: AuthService,
     private dialogService: DialogService,
   ) {
     this.apiService.getCategories().subscribe({
@@ -77,6 +80,10 @@ export class SettingsComponent {
 
   toGithubWingfit() {
     this.utilsService.toGithubWingfit();
+  }
+
+  scrollTo(anchor: string) {
+    document.getElementById(anchor)?.scrollIntoView();
   }
 
   check_update() {
@@ -156,6 +163,19 @@ export class SettingsComponent {
     }
   }
 
+  toggleAssistantForm() {
+    // this.assistantFormShow = !this.assistantFormShow;
+    this.utilsService.toast(
+      'info',
+      'Coming soon',
+      'Work in progress, Assistant is coming soon',
+    );
+  }
+
+  deleteAssistant() {
+    //this.apiService.
+  }
+
   toggleCategoriesSorting() {
     this.isSortingCategories = !this.isSortingCategories;
     if (this.isSortingCategories)
@@ -227,6 +247,42 @@ export class SettingsComponent {
     }
   }
 
+  // MFA
+  enableMFA() {}
+  disableMFA() {}
+
+  updatePassword() {
+    let modal = this.dialogService.open(SettingsPasswordModalComponent, {
+      header: 'Update Password',
+      modal: true,
+      closable: true,
+      dismissableMask: false,
+      breakpoints: {
+        '640px': '90vw',
+      },
+    });
+
+    modal.onClose.subscribe({
+      next: (data) => {
+        if (!data) return;
+
+        this.apiService.updatePassword(data.current, data.new).subscribe({
+          next: (_) => {
+            this.utilsService.toast('success', 'Success', 'Password updated.');
+            this.authService.logout();
+          },
+          error: (_) => {
+            this.utilsService.toast(
+              'error',
+              'Error while updating',
+              _.error.detail,
+            );
+          },
+        });
+      },
+    });
+  }
+
   // Access Token
   enableAccessToken() {
     this.apiService.enableAccessToken().subscribe({
@@ -241,7 +297,11 @@ export class SettingsComponent {
             breakpoints: {
               '640px': '90vw',
             },
-            data: token,
+            data: {
+              token: token,
+              message:
+                "This is your Access Token, save it now as you won't be able to see it again",
+            },
           });
         }
       },

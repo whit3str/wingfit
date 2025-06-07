@@ -1,3 +1,12 @@
+<p-toolbar [style]="{ border: '0' }" [styleClass]="'md:!px-8 !bg-slate-50 dark:!bg-surface-900'">
+  <ng-template #start></ng-template>
+
+  <ng-template #end>
+    @if(user?.is_su) { <p-button text severity="danger" icon="pi pi-shield" [routerLink]="'/adminp'"
+      label="Admin panel" /> }
+  </ng-template>
+</p-toolbar>
+
 <div class="max-w-7xl mx-auto px-4 md:px-0 m-4">
   <p-card>
     <div class="p-4">
@@ -81,6 +90,35 @@
 </div>
 
 <div class="max-w-7xl mx-auto px-4 md:px-0 m-4 grid md:grid-cols-2 gap-4">
+  <p-card [style]="{ height: '100%' }">
+    <div class="p-4">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-200">Password</h1>
+      <p class="mt-4 text-gray-600 dark:text-gray-400">
+        You can update your password using your actual password.
+      </p>
+
+      <div class="pt-4 text-center">
+        <p-button text severity="danger" icon="pi pi-key" label="Update Password" (click)="updatePassword()" />
+      </div>
+    </div>
+  </p-card>
+
+  <p-card [style]="{ height: '100%' }">
+    <div class="p-4">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-200">Multi Factor Authentication (MFA)
+      </h1>
+      <p class="mt-4 text-gray-600 dark:text-gray-400">
+        Enabling MFA allows you to add a layer of security to your account
+      </p>
+
+      <p class="mt-4 font-light text-gray-500">
+        This section is part on the Wingfit's Roadmap and will be available soon<sup>TM</sup>
+      </p>
+    </div>
+  </p-card>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 md:px-0 m-4 grid md:grid-cols-2 gap-4">
   <p-card>
     <div class="p-4">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-200">Wingfit Token</h1>
@@ -95,7 +133,7 @@
         @if (user?.api_token) {
         <div class="flex gap-4 justify-center items-center">
           <p-floatlabel variant="in">
-            <input id="token" [disabled]="true" value="***************" pInputText />
+            <input [disabled]="true" value="***************" pInputText />
             <label for="token">Token</label>
           </p-floatlabel>
 

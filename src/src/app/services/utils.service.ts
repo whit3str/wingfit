@@ -45,6 +45,20 @@ export class UtilsService {
     this.renderDarkMode();
   }
 
+  //generate a pseudo-random string for pw reset
+  basicRandomString(): string {
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$!';
+    const array = new Uint32Array(10);
+    crypto.getRandomValues(array);
+
+    let password = '';
+    for (let i = 0; i < 10; i++) {
+      password += chars[array[i] % chars.length];
+    }
+    return password;
+  }
+
   // Emoji add to input
   addEmoji(content: HTMLTextAreaElement, emoji: string): string {
     let carrotPosition: number = content.selectionStart;
