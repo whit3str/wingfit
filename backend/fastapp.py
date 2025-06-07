@@ -1305,6 +1305,9 @@ def export_user_data(
         ],
     }
 
+    hw_data = session.exec(select(HealthWatchData).where(HealthWatchData.user == current_user).order_by(HealthWatchData.cdate.desc()))
+    data["hw_data"] = [HealthWatchDataRead.serialize(r) for r in hw_data]
+
     images = session.exec(select(Image).where(Image.user == current_user))
     for im in images:
         with open(Path(settings.ASSETS_FOLDER) / im.filename, "rb") as f:
@@ -1354,7 +1357,6 @@ def admin_export_data(session: SessionDep, current_user: Annotated[str, Depends(
     users = session.exec(select(User)).all()
     for user in users:
         username = user.username
-        print(username)
         data[username] = {
             "_": {
                 "at": datetime.timestamp(datetime.now()),
@@ -1373,6 +1375,9 @@ def admin_export_data(session: SessionDep, current_user: Annotated[str, Depends(
                 )
             ],
         }
+
+        hw_data = session.exec(select(HealthWatchData).where(HealthWatchData.user == username).order_by(HealthWatchData.cdate.desc()))
+        data[username]["hw_data"] = [HealthWatchDataRead.serialize(r) for r in hw_data]
 
         images = session.exec(select(Image).where(Image.user == username))
         for im in images:
@@ -1591,18 +1596,59 @@ async def post_whoop_archive(session: SessionDep, current_user: Annotated[str, D
             reader = csv.reader((line.decode('utf-8') for line in file), delimiter=',')
             next(reader)
 
-            existing_dates = {date for date
-                in session.exec(select(HealthWatchData.cdate).where(HealthWatchData.user == current_user)).all()
-            }
+            existing_records = {
+                record.cdate: record
+                for record in session.exec(select(HealthWatchData).where(HealthWatchData.user == current_user)).all()
+            } # date: HealthWatchData
 
             for row in reader:
                 if not row or not row[3] or not row[8]:  # Recovery or strain missing indicates the row is incomplete
                     continue
 
-                date_value = parse_str_or_date_to_date(row[0].split(" ")[0])
-                if date_value in existing_dates:
-                    # The archive contains all data, so it will contain previously ingested
-                    # Maybe we could update the db object
+                # Use 'awake' datetime because 'cycle' datetimes are gapped if you sleep late or miss a night, not the best solution but a quickwin
+                date_value = parse_str_or_date_to_date(row[13].split(" ")[0])
+                if date_value in existing_records:
+                    existing_record = existing_records[date_value]
+
+                    if existing_record.recovery != row[3]:
+                        existing_record.recovery = row[3]
+                        updated = True
+                    if existing_record.strain != row[8]:
+                        existing_record.strain = row[8]
+                        updated = True
+                    if existing_record.resting_hr != row[4]:
+                        existing_record.resting_hr = row[4]
+                        updated = True
+                    if existing_record.hrv != row[5]:
+                        existing_record.hrv = row[5]
+                        updated = True
+                    if existing_record.temperature != row[6]:
+                        existing_record.temperature = row[6]
+                        updated = True
+                    if existing_record.oxy_level != row[7]:
+                        existing_record.oxy_level = row[7]
+                        updated = True
+                    if existing_record.sleep_score != row[14]:
+                        existing_record.sleep_score = row[14]
+                        updated = True
+                    if existing_record.sleep_duration_light != row[18]:
+                        existing_record.sleep_duration_light = row[18]
+                        updated = True
+                    if existing_record.sleep_duration_deep != row[19]:
+                        existing_record.sleep_duration_deep = row[19]
+                        updated = True
+                    if existing_record.sleep_duration_rem != row[20]:
+                        existing_record.sleep_duration_rem = row[20]
+                        updated = True
+                    if existing_record.sleep_duration_awake != row[21]:
+                        existing_record.sleep_duration_awake = row[21]
+                        updated = True
+                    if existing_record.sleep_efficiency != row[24]:
+                        existing_record.sleep_efficiency = row[24]
+                        updated = True
+
+                    if updated:
+                        session.add(existing_record)
                     continue
 
                 new_whoop_data = HealthWatchData(
