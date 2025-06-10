@@ -338,7 +338,7 @@
       <div>
         <div class="flex justify-center">
           @defer {
-          @if (durationsByCategory.labels.length) {
+          @if (totalWorkoutsHours && durationsByCategory.labels.length) {
           <p-chart type="pie" [data]="durationsByCategory" [options]="pieGraphOptions" height="160px" />
           } @else {
           <div class="flex justify-center">
@@ -347,7 +347,7 @@
                 Nothing to see yet
               </h2>
               <p class="mt-4 font-light text-center text-gray-500">
-                {{ year }} has no workouts
+                {{ year }} has no workouts duration
               </p>
             </div>
           </div>
@@ -386,7 +386,7 @@
 
       <div class="mt-4">
         @defer {
-        @if (categoryDurationPerWeek.labels.length) {
+        @if (totalWorkoutsHours && categoryDurationPerWeek.labels.length) {
         <p-chart type="bar" [data]="categoryDurationPerWeek" [options]="stackedGraphOptions" />
         } @else {
         <div class="flex justify-center mt-4">
@@ -395,7 +395,7 @@
               Nothing to see yet
             </h2>
             <p class="mt-4 font-light text-center text-gray-500">
-              {{ year }} has no workouts
+              {{ year }} has no workouts duration
             </p>
           </div>
         </div>

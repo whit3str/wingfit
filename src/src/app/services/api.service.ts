@@ -58,7 +58,7 @@ export class ApiService {
   }
 
   exportData(): Observable<any> {
-    return this.httpClient.get<any>(this.apiBaseUrl + '/export');
+    return this.httpClient.get<any>(this.apiBaseUrl + '/settings/export');
   }
 
   // Category endpoints

@@ -226,7 +226,12 @@ export class AdminPanelComponent {
         window.URL.revokeObjectURL(url);
       },
       error: (_) => {
-        this.utilsService.toast('error', 'Error', _.error.detail);
+        this.utilsService.toast(
+          'error',
+          'Error',
+          _.error.detail || 'Error while exporting data',
+        );
+        console.log(_);
       },
     });
   }

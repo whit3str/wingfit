@@ -130,10 +130,17 @@ html {
 .tooltip-row {
   display: flex;
   align-items: center;
+  white-space: pre;
   gap: 8px;
   padding: 10px 16px;
   font-size: 14px;
   color: #111827;
+
+  &-border {
+    padding: 4px 4px 4px 12px;
+    margin: 0px 0px 10px 18px;
+    border-left: 3px solid;
+  }
 }
 
 .tooltip-color {

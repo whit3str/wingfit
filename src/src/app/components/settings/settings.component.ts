@@ -20,10 +20,7 @@ import {
 } from '@angular/cdk/drag-drop';
 import { SkeletonModule } from 'primeng/skeleton';
 import { forkJoin, Observable } from 'rxjs';
-import {
-  FormsModule,
-  ReactiveFormsModule,
-} from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ToolbarModule } from 'primeng/toolbar';
 import { RouterLink } from '@angular/router';
 import { SettingsPasswordModalComponent } from '../../modals/settings-password-modal/settings-password-modal.component';
@@ -161,19 +158,6 @@ export class SettingsComponent {
         },
       });
     }
-  }
-
-  toggleAssistantForm() {
-    // this.assistantFormShow = !this.assistantFormShow;
-    this.utilsService.toast(
-      'info',
-      'Coming soon',
-      'Work in progress, Assistant is coming soon',
-    );
-  }
-
-  deleteAssistant() {
-    //this.apiService.
   }
 
   toggleCategoriesSorting() {
