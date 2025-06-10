@@ -1,9 +1,10 @@
 import re
 import secrets
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from enum import Enum
+from typing import Annotated
 
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, StringConstraints
 from pydantic_settings import BaseSettings
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -30,7 +31,7 @@ class Settings(BaseSettings):
     OPEN_AI_HOST: str = ""
 
     class Config:
-        env_file = "storage/config.yml"
+        env_file = "storage/settings.yml"
 
 
 class ResultKeyEnum(str, Enum):
@@ -40,7 +41,10 @@ class ResultKeyEnum(str, Enum):
 
 
 class LoginRegisterModel(BaseModel):
-    username: constr(min_length=1, max_length=19, pattern=r"^[a-zA-Z0-9_-]+$")
+    username: Annotated[
+        str,
+        StringConstraints(min_length=1, max_length=19, pattern=r"^[a-zA-Z0-9_-]+$"),
+    ]
     password: str
 
 
@@ -76,7 +80,7 @@ class User(UserBase, table=True):
     password: str
     is_active: bool = True
     is_su: bool = False
-    last_connect: datetime = Field(default_factory=datetime.utcnow)
+    last_connect: datetime = Field(default_factory=datetime.now(UTC))
     api_token: str | None = None
 
 
@@ -104,7 +108,7 @@ class StashBase(SQLModel):
 
 class Stash(StashBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: datetime.utcnow().date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
 
 
@@ -124,8 +128,8 @@ class StashRead(StashBase):
 
 class BlocCategoryBase(SQLModel):
     name: str
-    color: str | None = None
-    weight: int | None = None
+    color: str
+    weight: int
 
 
 class BlocCategory(BlocCategoryBase, table=True):
@@ -135,11 +139,15 @@ class BlocCategory(BlocCategoryBase, table=True):
     programblocs: list["ProgramStepBloc"] = Relationship(back_populates="category")
 
 
-class BlocCategoryRead(SQLModel):
-    id: int
+class BlocCategoryCreate(BlocCategoryBase):
     name: str
-    color: str | None = None
-    weight: int | None = None
+    color: str
+    weight: int | None
+
+
+class BlocCategoryRead(BlocCategoryBase):
+    id: int
+    weight: int | None
 
     @classmethod
     def serialize(cls, obj: BlocCategory) -> "BlocCategoryRead":
@@ -177,7 +185,7 @@ class BlocBase(SQLModel):
 
 class Bloc(BlocBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: datetime.utcnow().date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
     result_id: int | None = Field(default=None, foreign_key="blocresult.id")
     result: BlocResult | None = Relationship(back_populates="bloc")
@@ -189,7 +197,7 @@ class Bloc(BlocBase, table=True):
 class BlocCreate(BlocBase):
     category: BlocCategoryRead | None = None
     category_id: int | None = None
-    cdate: str | date = Field(default_factory=lambda: datetime.utcnow().date())
+    cdate: str | date = Field(default_factory=lambda: datetime.now(UTC).date())
 
 
 class BlocUpdate(BlocBase):
@@ -197,7 +205,7 @@ class BlocUpdate(BlocBase):
     category: BlocCategoryRead | None = None
     category_id: int | None = None
     result_id: int | None = None
-    cdate: str | date = Field(default_factory=lambda: datetime.utcnow().date())
+    cdate: str | date = Field(default_factory=lambda: datetime.now(UTC).date())
 
 
 class BlocRead(BlocBase):
@@ -259,7 +267,7 @@ class PRValueBase(SQLModel):
 
 
 class PRValueCreateOrUpdate(PRValueBase):
-    cdate: str | date = Field(default_factory=lambda: datetime.utcnow().date())
+    cdate: str | date = Field(default_factory=lambda: datetime.now(UTC).date())
 
     @classmethod
     def value_matches_record_key(cls, key: ResultKeyEnum, value: str) -> bool:
@@ -273,15 +281,13 @@ class PRValueCreateOrUpdate(PRValueBase):
             except ValueError:
                 return False
         if key == "time":  # time must be "[hh:]mm:ss"
-            return bool(
-                re.fullmatch(r"^(?:(?:(\d{,3}):)?([0-5]?\d):)?([0-5]?\d)$", value)
-            )
+            return bool(re.fullmatch(r"^(?:(?:(\d{,3}):)?([0-5]?\d):)?([0-5]?\d)$", value))
         return False
 
 
 class PRValue(PRValueBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: datetime.utcnow().date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
 
     pr_id: int = Field(foreign_key="pr.id")
     pr: PR | None = Relationship(back_populates="values")
@@ -307,15 +313,11 @@ class ProgramBase(SQLModel):
 
 class Program(ProgramBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: datetime.utcnow().date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
-    image_id: int | None = Field(
-        default=None, foreign_key="image.id", ondelete="CASCADE"
-    )
+    image_id: int | None = Field(default=None, foreign_key="image.id", ondelete="CASCADE")
     image: Image | None = Relationship(back_populates="programs")
-    steps: list["ProgramStep"] = Relationship(
-        back_populates="program", cascade_delete=True
-    )
+    steps: list["ProgramStep"] = Relationship(back_populates="program", cascade_delete=True)
 
 
 class ProgramCreate(ProgramBase):
@@ -373,7 +375,7 @@ class ProgramStepBase(SQLModel):
 
 class ProgramStep(ProgramStepBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: datetime.utcnow().date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
     program_id: int = Field(foreign_key="program.id", ondelete="CASCADE")
     program: Program | None = Relationship(back_populates="steps")
@@ -415,9 +417,7 @@ class ProgramStepRead(ProgramStepBase):
 
     @classmethod
     def serialize(cls, obj: ProgramStep) -> "ProgramStepRead":
-        return cls(
-            id=obj.id, name=obj.name, cdate=obj.cdate, repeat=obj.repeat, blocs=[]
-        )
+        return cls(id=obj.id, name=obj.name, cdate=obj.cdate, repeat=obj.repeat, blocs=[])
 
 
 class ProgramStepBlocBase(SQLModel):
