@@ -250,11 +250,16 @@ export class ProgramComponent {
                 programStepModifiedKeysOnly,
               )
               .subscribe({
-                next: (step) => {
+                next: (obj) => {
                   let stepIndex = this.program!.steps.findIndex(
-                    (s) => s.id == step.id,
+                    (s) => s.id == obj.id,
                   );
-                  if (stepIndex > -1) this.program!.steps[stepIndex] = step;
+                  if (stepIndex > -1)
+                    this.program!.steps[stepIndex] = {
+                      ...obj,
+                      blocs: step.blocs,
+                    };
+                  //Backend does not return blocs, we inject it from actual obj
                 },
               });
           }
