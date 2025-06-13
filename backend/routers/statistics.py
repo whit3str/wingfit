@@ -1,6 +1,4 @@
 import csv
-import shutil
-import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -12,17 +10,22 @@ from sqlalchemy.sql import extract
 from sqlmodel import func, select
 
 from ..deps import SessionDep, get_current_username
-from ..models.models import Bloc, BlocCategory, BlocRead, HealthWatchData, HealthWatchDataRead
+from ..models.models import (
+    Bloc,
+    BlocCategory,
+    BlocRead,
+    HealthWatchData,
+    HealthWatchDataRead,
+)
 from ..utils.date import parse_str_or_date_to_date
-from ..utils.file import download_file
+from ..utils.file import download_file, upload_f_to_tempfile
+from ..utils.logging import app_logger
 
 router = APIRouter(prefix="/api/stats", tags=["statistics"])
 
 
 @router.get("/notes", response_model=list[BlocRead])
-def get_blocs_note(
-    session: SessionDep, current_user: Annotated[str, Depends(get_current_username)]
-) -> list:
+def get_blocs_note(session: SessionDep, current_user: Annotated[str, Depends(get_current_username)]) -> list:
     category = session.exec(
         select(BlocCategory)
         .where(BlocCategory.user == current_user)
@@ -136,31 +139,26 @@ async def post_whoop_archive(
     link: str | None = Form(None),
 ):
     if not file and not link:
+        app_logger.error(f"[post_whoop_archive][{current_user}] No link / file provided")
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: You must provide either a file or a link
 
     if link and not link.startswith("https://links.prod.whoop.com/"):
+        app_logger.error(f"[post_whoop_archive][{current_user}] Whoop export URL looks incorrect")
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Whoop export URL looks incorrect
-
-    if file and (not file.filename or not file.filename.startswith("my_whoop_data_")):
-        raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Whoop export archive starts with 'my_whoop_data_', ensure you are uploading the correct archive
 
     temporary_fp = ""
     if file:
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            shutil.copyfileobj(file.file, temp_file)
-            temporary_fp = temp_file.name
-
+        temporary_fp = await upload_f_to_tempfile(file)
     else:
         temporary_fp = await download_file(link)
 
     inserted = 0
     with zipfile.ZipFile(temporary_fp, "r") as whoop_archive:
         if "physiological_cycles.csv" not in whoop_archive.namelist():
+            app_logger.error(
+                f"[post_whoop_archive][{current_user}] physiological_cycles.csv is missing in archive"
+            )
             raise HTTPException(status_code=400, detail="Bad request")
-            # TODO: Invalid archive: 'physiological_cycles.csv' is missing.
 
         with whoop_archive.open("physiological_cycles.csv") as file:
             reader = csv.reader((line.decode("utf-8") for line in file), delimiter=",")
@@ -171,7 +169,7 @@ async def post_whoop_archive(
                 for record in session.exec(
                     select(HealthWatchData).where(HealthWatchData.user == current_user)
                 ).all()
-            }  # date: HealthWatchData
+            }  # {date: HealthWatchData}
 
             for row in reader:
                 if (

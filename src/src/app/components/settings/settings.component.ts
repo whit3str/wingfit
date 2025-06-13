@@ -25,6 +25,7 @@ import { ToolbarModule } from 'primeng/toolbar';
 import { RouterLink } from '@angular/router';
 import { SettingsPasswordModalComponent } from '../../modals/settings-password-modal/settings-password-modal.component';
 import { AuthService } from '../../services/auth.service';
+import { SettingsMFAVerifyComponent } from '../../modals/settings-mfa-verify/settings-mfa-verify.component';
 
 @Component({
   selector: 'app-settings',
@@ -232,8 +233,60 @@ export class SettingsComponent {
   }
 
   // MFA
-  enableMFA() {}
-  disableMFA() {}
+  enableMFA() {
+    this.apiService.enableMFA().subscribe({
+      next: (secret) => {
+        let modal = this.dialogService.open(SettingsMFAVerifyComponent, {
+          header: 'Verify MFA',
+          modal: true,
+          closable: true,
+          breakpoints: {
+            '640px': '90vw',
+          },
+          data: {
+            message:
+              "Add this secret to your authentication app.\nEnter the generated code below to verify it's correct",
+            token: secret.secret,
+          },
+        });
+
+        modal.onClose.subscribe({
+          next: (code: string) => {
+            if (code)
+              this.apiService.verifyMFA(code).subscribe({
+                next: (_) => (this.user!.mfa_enabled = true),
+              });
+          },
+          error: (_) => {
+            this.utilsService.toast('error', 'Error', 'Error enabling MFA');
+          },
+        });
+      },
+    });
+  }
+
+  disableMFA() {
+    let modal = this.dialogService.open(SettingsMFAVerifyComponent, {
+      header: 'Verify MFA',
+      modal: true,
+      closable: true,
+      breakpoints: {
+        '640px': '90vw',
+      },
+    });
+
+    modal.onClose.subscribe({
+      next: (code: string) => {
+        if (code)
+          this.apiService.disableMFA(code).subscribe({
+            next: () => (this.user!.mfa_enabled = false),
+          });
+      },
+      error: (_) => {
+        this.utilsService.toast('error', 'Error', 'Error disabling MFA');
+      },
+    });
+  }
 
   updatePassword() {
     let modal = this.dialogService.open(SettingsPasswordModalComponent, {
@@ -315,22 +368,39 @@ export class SettingsComponent {
   }
 
   exportData() {
-    this.apiService.exportData().subscribe({
-      next: (data) => {
-        const blob = new Blob([JSON.stringify(data)], {
-          type: 'application/json',
+    if (!this.user?.mfa_enabled) return;
+
+    const verifyModal = this.dialogService.open(SettingsMFAVerifyComponent, {
+      header: 'Verify MFA',
+      modal: true,
+      closable: true,
+      breakpoints: {
+        '640px': '90vw',
+      },
+    });
+
+    verifyModal.onClose.subscribe({
+      next: (code: string) => {
+        if (!code) return;
+
+        this.apiService.exportData(code).subscribe({
+          next: (data) => {
+            const blob = new Blob([JSON.stringify(data)], {
+              type: 'application/json',
+            });
+            const url = window.URL.createObjectURL(blob);
+            const today = new Date().toISOString().split('T')[0];
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wingfit_export_${today}.json`;
+            document.body.appendChild(a);
+            a.click();
+
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          },
         });
-        const url = window.URL.createObjectURL(blob);
-        const today = new Date().toISOString().split('T')[0];
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `wingfit_export_${today}.json`;
-        document.body.appendChild(a);
-        a.click();
-
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
       },
     });
   }

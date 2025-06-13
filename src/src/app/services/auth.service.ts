@@ -11,6 +11,22 @@ export interface Token {
   access_token: string;
 }
 
+export interface MFARequired {
+  pending_code: string;
+  username: string;
+}
+
+export interface AuthParams {
+  auth: string;
+  register_enabled: boolean;
+  oidc?: {
+    OIDC_HOST: string;
+    OIDC_CLIENT_ID: string;
+    OIDC_REALM: string;
+    OIDC_REDIRECT_URI: string;
+  };
+}
+
 const JWT_TOKEN = 'WINGFIT_AT';
 const REFRESH_TOKEN = 'WINGFIT_RT';
 const JWT_USER = 'WINGFIT_USER';
@@ -52,6 +68,10 @@ export class AuthService {
     return localStorage.getItem(REFRESH_TOKEN) ?? '';
   }
 
+  authParams(): Observable<AuthParams> {
+    return this.httpClient.get<AuthParams>(this.apiBaseUrl + '/auth/params');
+  }
+
   storeTokens(tokens: Token): void {
     this.accessToken = tokens.access_token;
     this.refreshToken = tokens.refresh_token;
@@ -75,13 +95,37 @@ export class AuthService {
       );
   }
 
-  login(authForm: { username: string; password: string }): Observable<Token> {
+  login(authForm: {
+    username: string;
+    password: string;
+  }): Observable<Token | MFARequired> {
     return this.httpClient
-      .post<Token>(this.apiBaseUrl + '/auth/login', authForm)
+      .post<Token | MFARequired>(this.apiBaseUrl + '/auth/login', authForm)
       .pipe(
-        tap((tokens: Token) => {
-          this.loggedUser = authForm.username;
-          this.storeTokens(tokens);
+        tap((data: any) => {
+          if (data.access_token && data.refresh_token) {
+            this.loggedUser = authForm.username;
+            this.storeTokens(data);
+          }
+        }),
+      );
+  }
+
+  verify_mfa(
+    username: string,
+    pending_code: string,
+    code: string,
+  ): Observable<Token> {
+    return this.httpClient
+      .post<Token>(this.apiBaseUrl + '/auth/login_mfa', {
+        username: username,
+        pending_code: pending_code,
+        code: code,
+      })
+      .pipe(
+        tap((Token) => {
+          this.loggedUser = username;
+          this.storeTokens(Token);
         }),
       );
   }
@@ -117,6 +161,19 @@ export class AuthService {
     }
 
     this.router.navigate(['/auth']);
+  }
+
+  verifyCodeOauth(code: string): Observable<Token> {
+    return this.httpClient
+      .post<Token>(this.apiBaseUrl + '/auth/oidc/login', { code })
+      .pipe(
+        tap((data: any) => {
+          if (data.access_token && data.refresh_token) {
+            this.loggedUser = this._getTokenUsername(data.access_token);
+            this.storeTokens(data);
+          }
+        }),
+      );
   }
 
   private removeTokens(): void {
@@ -220,6 +277,20 @@ export class AuthService {
     }
 
     return JSON.parse(decoded);
+  }
+
+  private _getTokenUsername(token: string): string {
+    const decodedToken = this._decodeToken(token);
+
+    if (decodedToken === null) {
+      return '';
+    }
+
+    if (!decodedToken.hasOwnProperty('sub')) {
+      return '';
+    }
+
+    return decodedToken.sub;
   }
 
   private _getTokenExpirationDate(token: string): Date | null {

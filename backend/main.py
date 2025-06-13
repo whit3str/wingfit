@@ -12,6 +12,8 @@ from .db.core import init_db
 from .routers import admin, auth, blocs, categories, pr, programs
 from .routers import settings as settings_r
 from .routers import stash, statistics
+from .utils.logging import request_logger
+from .utils.date import dt_utc_str
 
 if not Path(settings.FRONTEND_FOLDER).is_dir():
     raise ValueError()
@@ -47,8 +49,26 @@ def info():
 
 
 @app.middleware("http")
-async def not_found_to_spa(request: Request, call_next):
+async def http_logger__spa_handler(request: Request, call_next):
     response = await call_next(request)
+
+    # Retrieve JWT second part, with properties
+    bearer = request.headers.get("Authorization", ".").split(".")[1]
+
+    # Keys are light to limit size
+    # T: Datetime, M: Method, U: URL, A: Bearer, B: Body size, C: Resp. code, S: Resp. length, H: Host IP
+    log_params = {
+        "t": dt_utc_str(),
+        "m": request.method,
+        "u": str(request.url),
+        "a": bearer,
+        "b": request.headers.get("Content-Length"),
+        "c": response.status_code,
+        "s": response.headers.get("Content-Length"),
+        "h": request.client.host,
+    }
+    request_logger.debug(str(log_params))
+
     if response.status_code == 404 and not request.url.path.startswith(("/api", "/assets")):
         return FileResponse(Path(settings.FRONTEND_FOLDER) / "index.html")
     return response

@@ -1,13 +1,14 @@
-import base64
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
+import pyotp
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlmodel import select
 
 from .. import __version__
 from ..config import settings
+from ..security import generate_mfa_secret, verify_mfa_code
 from ..deps import SessionDep, get_current_username
 from ..models.models import (
     Bloc,
@@ -21,7 +22,7 @@ from ..models.models import (
     User,
     UserRead,
 )
-from ..utils.misc import check_update, generate_api_token
+from ..utils.misc import b64e, check_update, generate_api_token
 from .programs import export_program
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -35,10 +36,20 @@ async def get_user_settings(
     return UserRead.serialize(db_user)
 
 
-@router.get("/export")
+@router.put("/export")
 def export_user_data(
-    session: SessionDep, current_user: Annotated[str, Depends(get_current_username)]
+    session: SessionDep,
+    current_user: Annotated[str, Depends(get_current_username)],
+    code: str = Body(..., embed=True),
 ):
+    db_user = session.get(User, current_user)
+    if not db_user.mfa_enabled:
+        raise HTTPException(status_code=400, detail="Enable MFA to export data")
+
+    success = verify_mfa_code(db_user.mfa_secret, code)
+    if not success:
+        raise HTTPException(status_code=403, detail="Invalid code")
+
     data = {
         "_": {"at": datetime.timestamp(datetime.now()), "version": __version__},
         "categories": [
@@ -46,8 +57,7 @@ def export_user_data(
             for c in session.exec(select(BlocCategory).filter(BlocCategory.user == current_user))
         ],
         "blocs": [
-            BlocRead.serialize(bloc)
-            for bloc in session.exec(select(Bloc).filter(Bloc.user == current_user))
+            BlocRead.serialize(bloc) for bloc in session.exec(select(Bloc).filter(Bloc.user == current_user))
         ],
         "images": {},
         "programs": [
@@ -66,7 +76,7 @@ def export_user_data(
     images = session.exec(select(Image).where(Image.user == current_user))
     for im in images:
         with open(Path(settings.ASSETS_FOLDER) / im.filename, "rb") as f:
-            data["images"][im.id] = base64.b64encode(f.read())
+            data["images"][im.id] = b64e(f.read())
 
     return data
 
@@ -83,7 +93,6 @@ def generate_user_api_token(
     db_user = session.get(User, current_user)
     if db_user.api_token:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Token already init
 
     token = generate_api_token()
     setattr(db_user, "api_token", token)
@@ -94,16 +103,83 @@ def generate_user_api_token(
 
 
 @router.delete("/api_token")
-def delete_user_api_token(
-    session: SessionDep, current_user: Annotated[str, Depends(get_current_username)]
-):
+def delete_user_api_token(session: SessionDep, current_user: Annotated[str, Depends(get_current_username)]):
     db_user = session.get(User, current_user)
     if not db_user.api_token:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: No Token
 
     setattr(db_user, "api_token", None)
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
+    return {}
+
+
+@router.post("/mfa/enable")
+async def enable_mfa(session: SessionDep, current_user: Annotated[str, Depends(get_current_username)]):
+    db_user = session.get(User, current_user)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="The resource does not exist")
+
+    if db_user.mfa_enabled:
+        raise HTTPException(status_code=400, detail="Bad request")
+
+    mfa_secret = generate_mfa_secret()
+    db_user.mfa_secret = mfa_secret
+    session.add(db_user)
+    session.commit()
+
+    totp = pyotp.TOTP(mfa_secret)
+    uri = totp.provisioning_uri(name=db_user.username, issuer_name="Wingfit")
+
+    return {"secret": mfa_secret, "uri": uri}
+
+
+@router.post("/mfa/verify")
+async def verify_mfa(
+    session: SessionDep,
+    current_user: Annotated[str, Depends(get_current_username)],
+    code: str = Body(..., embed=True),
+):
+    db_user = session.get(User, current_user)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="The resource does not exist")
+
+    if not db_user.mfa_secret or db_user.mfa_enabled:
+        raise HTTPException(status_code=400, detail="Bad request")
+
+    success = verify_mfa_code(db_user.mfa_secret, code)
+    if not success:
+        db_user.mfa_secret = None
+        session.add(db_user)
+        session.commit()
+        raise HTTPException(status_code=403, detail="Invalid code")
+
+    db_user.mfa_enabled = True
+    session.add(db_user)
+    session.commit()
+
+    return {}
+
+
+@router.post("/mfa/disable")
+async def disable_mfa(
+    session: SessionDep,
+    current_user: Annotated[str, Depends(get_current_username)],
+    code: str = Body(..., embed=True),
+):
+    db_user = session.get(User, current_user)
+    if not db_user or not db_user.mfa_enabled or not db_user.mfa_secret:
+        raise HTTPException(status_code=400, detail="Bad request")
+
+    success = verify_mfa_code(db_user.mfa_secret, code)
+    if not success:
+        raise HTTPException(status_code=403, detail="Invalid code")
+
+    db_user.mfa_secret = None
+    db_user.mfa_enabled = False
+
+    session.add(db_user)
+    session.commit()
+
     return {}

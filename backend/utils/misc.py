@@ -11,11 +11,13 @@ def generate_api_token() -> str:
     return str(uuid4())
 
 
+def b64e(data: bytes) -> bytes:
+    return base64.b64encode(data)
+
+
 def b64img_decode(data: str) -> bytes:
     return (
-        base64.b64decode(data.split(",", 1)[1])
-        if data.startswith("data:image/")
-        else base64.b64decode(data)
+        base64.b64decode(data.split(",", 1)[1]) if data.startswith("data:image/") else base64.b64decode(data)
     )
 
 

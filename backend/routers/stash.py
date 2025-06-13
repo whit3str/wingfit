@@ -50,9 +50,7 @@ def delete_stash(
 
 
 @router.delete("")
-def empty_stash(
-    session: SessionDep, current_user: Annotated[str, Depends(get_current_username)]
-) -> dict:
+def empty_stash(session: SessionDep, current_user: Annotated[str, Depends(get_current_username)]) -> dict:
     session.exec(delete(Stash).where(Stash.user == current_user))
     session.commit()
     return {}

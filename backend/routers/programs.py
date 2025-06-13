@@ -26,7 +26,8 @@ from ..models.models import (
     ProgramUpdate,
 )
 from ..security import verify_exists_and_owns
-from ..utils.file import assets_folder_path, generate_filename, remove_image, save_image
+from ..utils.file import remove_image, save_image
+from ..utils.logging import app_logger
 from ..utils.misc import b64img_decode
 
 router = APIRouter(prefix="/api/programs", tags=["programs"])
@@ -40,27 +41,22 @@ async def upload_program(
 ) -> ProgramRead:
     if file.content_type != "application/json":
         raise HTTPException(status_code=415, detail="Resource format not supported")
-        # TODO: File must be a JSON file
 
     try:
         content = await file.read()
         data = json.loads(content)
         program_data = ProgramCreate(**data)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        app_logger.error(f"[upload_program][{current_user}] Invalid JSON format: {exc}")
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Invalid JSON format
     except ValidationError:
         raise HTTPException(status_code=422, detail="Resource cannot be processed")
-        # TODO: File does not appear to be a Program
 
     existing_program = session.exec(
-        select(Program).where(
-            Program.user == current_user, Program.name == program_data.get("name")
-        )
+        select(Program).where(Program.user == current_user, Program.name == program_data.get("name"))
     ).first()
     if existing_program:
-        raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Program already exists
+        raise HTTPException(status_code=409, detail="The resource already exists")
 
     new_program = Program(
         name=program_data.get("name"),
@@ -70,21 +66,10 @@ async def upload_program(
 
     if program_data.image:
         image_bytes = b64img_decode(program_data.get("image"))
-        if image_bytes.startswith(b"\x89PNG"):
-            image_format = "png"
-        elif image_bytes.startswith(b"\xff\xd8"):
-            image_format = "jpeg"
-        elif image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP":
-            image_format = "webp"
-        else:
-            raise HTTPException(
-                status_code=415,
-                detail="Image format not supported. Allowed: PNG, JPG, WEBP",
-            )
-
-        filename = generate_filename(image_format)
-        filepath = assets_folder_path() / filename
-        save_image(image_bytes, filepath, (400, 400))
+        filename = save_image(image_bytes, 400)
+        if not filename:
+            app_logger.error(f"[upload_program][{current_user}] Image saving error, check logs")
+            raise HTTPException(status_code=400, detail="Bad request")
 
         image = Image(filename=filename, user=current_user)
         session.add(image)
@@ -113,8 +98,8 @@ async def upload_program(
         for bloc in step.get("blocs", []):
             category_id = blocs_category_id_mapping.get(bloc.get("type"))
             if not category_id:
+                app_logger.error(f"[upload_program][{current_user}] Category missing in Step Bloc")
                 raise HTTPException(status_code=400, detail="Bad request")
-                # TODO: Bloc type '{bloc.get('type')}' does not exist
 
             new_bloc = ProgramStepBloc(
                 content=bloc.get("content"),
@@ -143,7 +128,6 @@ def export_program(
     ).first()
     if not db_program:
         raise HTTPException(status_code=404, detail="The resource does not exist")
-        # TODO: Not found
 
     data = db_program.dict()  # Use dict() instead of serialize to get a dict
     data["steps"] = [ProgramStepWithBlocsRead.serialize(step) for step in db_program.steps]
@@ -173,19 +157,10 @@ async def post_program(
 
     if program_data.image:
         image_bytes = b64img_decode(program_data.image)
-        if image_bytes.startswith(b"\x89PNG"):
-            image_format = "png"
-        elif image_bytes.startswith(b"\xff\xd8"):
-            image_format = "jpeg"
-        elif image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP":
-            image_format = "webp"
-        else:
-            raise HTTPException(status_code=415, detail="Resource format not supported")
-            # TODO: Image format not supported. Allowed: PNG, JPG, WEBP
-
-        filename = generate_filename(image_format)
-        filepath = assets_folder_path() / filename
-        save_image(image_bytes, filepath, (400, 400))
+        filename = save_image(image_bytes, 400)
+        if not filename:
+            app_logger.error(f"[post_program][{current_user}] Image saving error, check logs")
+            raise HTTPException(status_code=400, detail="Bad request")
 
         image = Image(filename=filename, user=current_user)
         session.add(image)
@@ -222,21 +197,10 @@ async def put_program(
 
     if program_data.get("image"):
         image_bytes = b64img_decode(program_data.get("image"))
-        if image_bytes.startswith(b"\x89PNG"):
-            image_format = "png"
-        elif image_bytes.startswith(b"\xff\xd8"):
-            image_format = "jpeg"
-        elif image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP":
-            image_format = "webp"
-        else:
-            raise HTTPException(status_code=415, detail="Resource format not supported")
-            # TODO: Image format not supported. Allowed: PNG, JPG, WEBP
-
-        filename = generate_filename(image_format)
-        filepath = assets_folder_path() / filename
-        if not save_image(image_bytes, filepath, (400, 400)):
+        filename = save_image(image_bytes, 400)
+        if not filename:
+            app_logger.error(f"[put_program][{current_user}] Image saving error, check logs")
             raise HTTPException(status_code=400, detail="Bad request")
-            # TODO: Image cannot be read, most likely corrupted
 
         image = Image(filename=filename, user=current_user)
         session.add(image)
@@ -255,7 +219,7 @@ async def put_program(
                 remove_image(old_image.filename)
                 session.delete(old_image)
             except Exception as exc:
-                print("Exception during previous image deletion:", exc)
+                app_logger.error(f"[put_program][{current_user}] Exception during previous image deletion: {exc}")
 
     session.refresh(db_program)
 
@@ -282,8 +246,11 @@ def delete_program(
             remove_image(db_program.image.filename)
             session.delete(db_program.image)
         except Exception as exc:
-            # TODO: Enhanced logging
-            print("Exception during image deletion:", exc)
+            app_logger.error(f"[delete_program][{current_user}] Exception during image deletion: {exc}")
+            raise HTTPException(
+                status_code=500,
+                detail="Roses are red, violets are blue, if you're reading this, I'm sorry for you",
+            )
 
     session.delete(db_program)
     session.commit()
@@ -308,9 +275,7 @@ def get_program_steps(
     current_user: Annotated[str, Depends(get_current_username)],
 ) -> list[ProgramStepWithBlocsRead]:
     steps = session.exec(
-        select(ProgramStep).filter(
-            ProgramStep.user == current_user, ProgramStep.program_id == program_id
-        )
+        select(ProgramStep).filter(ProgramStep.user == current_user, ProgramStep.program_id == program_id)
     )
     return [ProgramStepWithBlocsRead.serialize(step) for step in steps]
 
@@ -353,7 +318,6 @@ def put_program_step(
 
     if db_program_step.program_id != program_id:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Step does not belong to the specified Program
 
     step_data = step_data.model_dump(exclude_unset=True)
     for key, value in step_data.items():
@@ -380,7 +344,6 @@ def delete_program_step(
 
     if db_program_step.program_id != program_id:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Step does not belong to the specified Program
 
     session.delete(db_program_step)
     session.commit()
@@ -403,11 +366,10 @@ def post_program_step_bloc(
 
     if db_program_step.program_id != program_id:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Step does not belong to the specified Program
 
     if not bloc_data.category and not bloc_data.category_id:
+        app_logger.error(f"[post_program_step_bloc][{current_user}] No Category provided")
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: No Category provided
 
     new_bloc = ProgramStepBloc(
         content=bloc_data.content,
@@ -450,14 +412,12 @@ def put_program_step_bloc(
 
     if db_program_step.program_id != program_id:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Step does not belong to the specified Program
 
     db_program_step_bloc = session.get(ProgramStepBloc, bloc_id)
     verify_exists_and_owns(current_user, db_program_step_bloc)
 
     if db_program_step_bloc.program_step_id != step_id:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Bloc does not belong to the specified Program Step
 
     bloc_data = bloc_data.model_dump(exclude_unset=True)
     if bloc_data.get("category"):
@@ -489,14 +449,12 @@ def delete_program_step_bloc(
 
     if db_program_step.program_id != program_id:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Step does not belong to the specified Program
 
     db_program_step_bloc = session.get(ProgramStepBloc, bloc_id)
     verify_exists_and_owns(current_user, db_program_step_bloc)
 
     if db_program_step_bloc.program_step_id != step_id:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Bloc does not belong to the specified Program Step
 
     session.delete(db_program_step_bloc)
     session.commit()

@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
+import pyotp
 import jwt
 from argon2 import PasswordHasher
 from argon2 import exceptions as argon_exceptions
@@ -8,8 +9,18 @@ from sqlmodel import Session, select
 
 from .config import settings
 from .models.models import Token, User
+from .utils.logging import app_logger
 
 ph = PasswordHasher()
+
+
+def generate_mfa_secret() -> str:
+    return pyotp.random_base32()
+
+
+def verify_mfa_code(secret: str, code: str) -> bool:
+    totp = pyotp.TOTP(secret)
+    return totp.verify(code)
 
 
 def hash_password(password: str) -> str:
@@ -19,12 +30,13 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         return ph.verify(hashed_password, plain_password)
-    except argon_exceptions.VerifyMismatchError:
+    except (
+        argon_exceptions.VerifyMismatchError,
+        argon_exceptions.VerificationError,
+        argon_exceptions.InvalidHashError,
+    ) as exc:
+        app_logger.error(f"[verify_password] Exception: {exc}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
-        # TODO: Invalid password provided
-    except (argon_exceptions.VerificationError, argon_exceptions.InvalidHashError):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-        # TODO: Could not validate credentials
 
 
 def create_access_token(data: dict) -> str:

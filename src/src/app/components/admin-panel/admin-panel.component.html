@@ -17,6 +17,7 @@
               <th class="text-center!">MFA</th>
               <th class="text-center!">Active</th>
               <th class="text-center!">Role</th>
+              <th class="text-center!">Last connect</th>
               <th class="text-end!">Actions</th>
             </tr>
           </ng-template>
@@ -35,7 +36,7 @@
                 }
               </td>
               <td class="w-32">
-                @if (user.mfa) {
+                @if (user.mfa_enabled) {
                 <div
                   class="bg-green-100 mt-0.5 text-green-800 text-xs text-center px-2.5 py-1 rounded-sm dark:bg-green-700 dark:text-green-300">
                   active</div>
@@ -67,22 +68,29 @@
                   user</div>
                 }
               </td>
+              <td class="text-center! truncate"><span>{{ user.last_connect | date: 'MMM d, y, HH:mm' }}</span></td>
               <td class="flex justify-end space-x-2 items-center">
+                @defer () {
+                @if (hasMFA) {
                 <p-button text type="button" severity="danger" icon="pi pi-key" (click)="resetPassword(user)"
                   [disabled]="user.is_su" pTooltip="Reset User password" />
                 <p-button text type="button" [severity]="user.is_active ? 'danger' : 'success'"
                   [pTooltip]="user.is_active ? 'Disable User' : 'Enable User'" [disabled]="user.is_su"
                   [icon]="user.is_active ? 'pi pi-times' : 'pi pi-check'" (click)="toggleActive(user)" />
-                <p-button text type="button" disabled severity="danger" icon="pi pi-shield" (click)="manage2FA(user)"
-                  pTooltip="Manage User 2FA (soonTM)" />
+                <p-button text type="button" [disabled]="user.is_su || !user.mfa_enabled" severity="danger"
+                  icon="pi pi-shield" (click)="remove2FA(user)" pTooltip="Remover User 2FA" />
                 <p-button text type="button" severity="danger" icon="pi pi-trash" (click)="deleteUser(user)"
                   [disabled]="user.is_su" pTooltip="Delete User" />
+                } @else {
+                <span class="text-red-500">MFA not enabled</span>
+                }
+                } @placeholder (minimum 0.4s) {
+                <p-skeleton width="170px" height="32px" />
+                }
               </td>
             </tr>
           </ng-template>
         </p-table>
-
-
       </div>
     </div>
   </p-card>

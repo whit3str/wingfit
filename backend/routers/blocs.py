@@ -16,6 +16,7 @@ from ..models.models import (
 )
 from ..security import verify_exists_and_owns
 from ..utils.date import parse_str_or_date_to_date
+from ..utils.logging import app_logger
 
 router = APIRouter(prefix="/api/blocs", tags=["blocs"])
 
@@ -32,8 +33,8 @@ async def get_blocs(
     startdate = parse_str_or_date_to_date(startdate) if startdate else None
     enddate = parse_str_or_date_to_date(enddate) if enddate else None
     if startdate and enddate and startdate > enddate:
+        app_logger.error(f"[get_blocs][{current_user}] Specified dates are incoherent")
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Provided dates are incoherent
 
     query = select(Bloc).where(Bloc.user == current_user).options(selectinload(Bloc.category))
     if startdate:
@@ -64,8 +65,8 @@ async def post_bloc(
     blocs = []
     for bloc in bloc_data:
         if not bloc.category and not bloc.category_id:
+            app_logger.error(f"[post_bloc][{current_user}] No Category/Category_id provided")
             raise HTTPException(status_code=400, detail="Bad request")
-            # TODO: No Category provided
 
         new_bloc = Bloc(
             content=bloc.content,
@@ -82,7 +83,6 @@ async def post_bloc(
         else:
             new_bloc.category_id = bloc.category.id
 
-        # TODO: Handle brand_id icon
         session.add(new_bloc)
         blocs.append(new_bloc)
 
@@ -102,8 +102,6 @@ async def put_bloc(
     db_bloc = session.get(Bloc, bloc_id)
     verify_exists_and_owns(current_user, db_bloc)
 
-    # TODO: Handle brand_id icon
-    # TODO: Handle result key
     bloc_data = bloc.model_dump(exclude_unset=True)
     if bloc_data.get("category"):
         bloc_data["category_id"] = bloc_data.get("category").get("id")
@@ -167,7 +165,6 @@ async def delete_bloc_result(
 
     if not db_bloc.result:
         raise HTTPException(status_code=404, detail="The resource does not exist")
-        # TODO: Bloc result not found
 
     session.delete(db_bloc.result)
     db_bloc.result = None

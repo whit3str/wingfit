@@ -7,3 +7,4 @@ argon2-cffi
 pydantic_settings
 requests
 Pillow
+pyotp

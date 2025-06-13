@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import func, select
 
 from ..deps import SessionDep, get_current_username
-from ..models.models import BlocCategory, BlocCategoryBase, BlocCategoryCreate, BlocCategoryRead
+from ..models.models import (
+    BlocCategory,
+    BlocCategoryBase,
+    BlocCategoryCreate,
+    BlocCategoryRead,
+)
 from ..security import verify_exists_and_owns
 
 router = APIRouter(prefix="/api/categories", tags=["categories"])
@@ -74,7 +79,6 @@ def delete_category(
 
     if get_category_blocs_cnt(session, category_id, current_user) > 0:
         raise HTTPException(status_code=409, detail="The resource already exists")
-        # TODO: Category in use
 
     session.delete(db_category)
     session.commit()

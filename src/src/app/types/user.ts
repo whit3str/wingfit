@@ -4,6 +4,5 @@ export interface User {
   api_token: boolean;
   is_active: boolean;
   is_su: boolean;
-
-  mfa?: boolean;
+  mfa_enabled: boolean;
 }

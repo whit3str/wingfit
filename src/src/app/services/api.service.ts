@@ -13,7 +13,6 @@ import {
   HealthWatchData,
   WeeklyDurationTotal,
 } from '../types/stats';
-import { Token } from './auth.service';
 
 @Injectable({
   providedIn: 'root',
@@ -51,14 +50,35 @@ export class ApiService {
     return this.httpClient.delete<{}>(this.apiBaseUrl + '/settings/api_token');
   }
 
+  enableMFA(): Observable<{ secret: string }> {
+    return this.httpClient.post<{ secret: string }>(
+      this.apiBaseUrl + '/settings/mfa/enable',
+      {},
+    );
+  }
+
+  verifyMFA(code: string): Observable<any> {
+    return this.httpClient.post<any>(this.apiBaseUrl + '/settings/mfa/verify', {
+      code,
+    });
+  }
+
+  disableMFA(code: string): Observable<{}> {
+    return this.httpClient.post<{}>(this.apiBaseUrl + '/settings/mfa/disable', {
+      code,
+    });
+  }
+
   checkVersion(): Observable<string> {
     return this.httpClient.get<string>(
       this.apiBaseUrl + '/settings/checkversion',
     );
   }
 
-  exportData(): Observable<any> {
-    return this.httpClient.get<any>(this.apiBaseUrl + '/settings/export');
+  exportData(code: string): Observable<any> {
+    return this.httpClient.put<any>(this.apiBaseUrl + '/settings/export', {
+      code: code,
+    });
   }
 
   // Category endpoints
@@ -403,31 +423,53 @@ export class ApiService {
     return this.httpClient.get<User[]>(this.apiBaseUrl + '/admin/users');
   }
 
-  adminExportData(): Observable<any> {
-    return this.httpClient.get<any>(this.apiBaseUrl + '/admin/export');
+  adminExportData(code: string): Observable<any> {
+    return this.httpClient.put<any>(this.apiBaseUrl + '/admin/export', {
+      code: code,
+    });
   }
 
-  deleteUser(username: string): Observable<{}> {
-    return this.httpClient.delete(this.apiBaseUrl + `/admin/users/${username}`);
+  deleteUser(username: string, code: string): Observable<{}> {
+    return this.httpClient.put(this.apiBaseUrl + `/admin/users/${username}`, {
+      code: code,
+    });
   }
 
-  addUser(data: { username: string; password: string }): Observable<User> {
-    return this.httpClient.post<User>(this.apiBaseUrl + '/admin/users', data);
-  }
-
-  resetUserPassword(username: string, _new: string): Observable<{}> {
-    return this.httpClient.put(
-      this.apiBaseUrl + `/admin/users/${username}/reset`,
+  adminResetMFA(username: string, code: string): Observable<User> {
+    return this.httpClient.put<User>(
+      this.apiBaseUrl + `/admin/users/${username}/reset_mfa`,
       {
-        new: _new,
+        code: code,
       },
     );
   }
 
-  toggleUserActive(username: string): Observable<User> {
+  addUser(data: {
+    username: string;
+    password: string;
+    code: string;
+  }): Observable<User> {
+    return this.httpClient.post<User>(this.apiBaseUrl + '/admin/users', data);
+  }
+
+  resetUserPassword(
+    username: string,
+    _new: string,
+    code: string,
+  ): Observable<{}> {
+    return this.httpClient.put(
+      this.apiBaseUrl + `/admin/users/${username}/reset`,
+      {
+        new: _new,
+        code: code,
+      },
+    );
+  }
+
+  toggleUserActive(username: string, code: string): Observable<User> {
     return this.httpClient.put<User>(
       this.apiBaseUrl + `/admin/users/${username}/toggle_active`,
-      {},
+      { code: code },
     );
   }
 

@@ -51,6 +51,19 @@ export const Interceptor = (
         );
       }
 
+      if (err.status == 403) {
+        console.error(err);
+        utilsService.toast(
+          'error',
+          'Error',
+          `${err.error?.detail || err.error || 'You are not allowed to do this'}`,
+        );
+        return throwError(
+          () =>
+            `Bad Request: ${err.error?.detail || err.error || 'You are not allowed to do this'}`,
+        );
+      }
+
       if (err.status == 413) {
         console.error(err);
         utilsService.toast(
@@ -119,7 +132,10 @@ export const Interceptor = (
         //  If any API route 401 -> redirect to login. We skip /refresh/ to prevent toast on login errors.
         if (!req.url.endsWith('/refresh')) {
           if (err instanceof HttpErrorResponse && err.status === 401) {
-            authService.logout('You must be authenticated', true);
+            authService.logout(
+              `${err.error?.detail || err.error || 'You must be authenticated'}`,
+              true,
+            );
           }
         }
       }

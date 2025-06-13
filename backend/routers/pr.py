@@ -18,6 +18,7 @@ from ..models.models import (
 )
 from ..security import verify_exists_and_owns
 from ..utils.date import parse_str_or_date_to_date
+from ..utils.logging import app_logger
 
 router = APIRouter(prefix="/api/pr", tags=["pr"])
 
@@ -38,33 +39,28 @@ def post_pr(
 ) -> PRRead:
     new_pr = PR(name=pr_data.name, key=pr_data.key, user=current_user)
     if pr_data.key not in {item.value for item in ResultKeyEnum}:
+        app_logger.error(f"[post_pr][{current_user}] Invalid key provided")
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Invalid key: kg, rep or time accepted.
 
     if pr_data.values:
-        try:
-            pr_values = []
-            for value in pr_data.values:
-                try:
-                    parsed_date = parse_str_or_date_to_date(value.cdate)
-                    if parsed_date > date.today():
-                        raise HTTPException(status_code=400, detail="Bad request")
-                        # TODO: PR Value cannot be in the future.
-
-                    if not PRValueCreateOrUpdate.value_matches_record_key(new_pr.key, value.value):
-                        raise HTTPException(status_code=400, detail="Bad request")
-                        # TODO: Invalid value for PR
-
-                    pr_values.append(PRValue(value=value.value, cdate=parsed_date, pr=new_pr))
-                except ValueError:
+        pr_values = []
+        for value in pr_data.values:
+            try:
+                parsed_date = parse_str_or_date_to_date(value.cdate)
+                if parsed_date > date.today():
+                    app_logger.error(f"[post_pr][{current_user}] PR Value cannot be in the future")
                     raise HTTPException(status_code=400, detail="Bad request")
-                    # TODO: str(e)
 
-            new_pr.values = pr_values
+                if not PRValueCreateOrUpdate.value_matches_record_key(new_pr.key, value.value):
+                    app_logger.error(f"[post_pr][{current_user}] Invalid value for PR")
+                    raise HTTPException(status_code=400, detail="Bad request")
 
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Bad request")
-            # TODO: str(e)
+                pr_values.append(PRValue(value=value.value, cdate=parsed_date, pr=new_pr))
+            except ValueError as exc:
+                app_logger.error(f"[post_pr][{current_user}] Error during PR value parsing: {exc}")
+                raise HTTPException(status_code=400, detail="Bad request")
+
+        new_pr.values = pr_values
 
     session.add(new_pr)
     session.commit()
@@ -86,7 +82,6 @@ def put_pr(
 
     if pr_data.get("key") and (pr_data.key not in {item.value for item in ResultKeyEnum}):
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Invalid key: kg, rep or time accepted.
 
     for key, value in pr_data.items():
         setattr(db_pr, key, value)
@@ -128,24 +123,26 @@ def post_pr_value(
         try:
             parsed_date = parse_str_or_date_to_date(value.cdate)
             if parsed_date > date.today():
+                app_logger.error(f"[post_pr_value][{current_user}] PR Value cannot be in the future")
                 raise HTTPException(status_code=400, detail="Bad request")
-                # TODO: PR Value cannot be in the future
 
             if not PRValueCreateOrUpdate.value_matches_record_key(db_pr.key, value.value):
+                app_logger.error(f"[post_pr_value][{current_user}] Invalid value for PR")
                 raise HTTPException(status_code=400, detail="Bad request")
-                # TODO: Invalid value for PR
 
             existing_value = session.exec(
                 select(PRValue).where(PRValue.pr_id == pr_id, PRValue.cdate == parsed_date)
             ).first()
             if existing_value:
                 raise HTTPException(status_code=409, detail="The resource already exists")
-                # TODO: PR Value with this date already exists
 
             new_pr_value = PRValue(value=value.value, cdate=parsed_date, pr=db_pr)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Bad request")
-            # TODO: str(e)
+        except Exception as exc:
+            app_logger.error(f"[post_pr_value][{current_user}] Exception during parsing: {exc}")
+            raise HTTPException(
+                status_code=500,
+                detail="Roses are red, violets are blue, if you're reading this, I'm sorry for you",
+            )
 
         session.add(new_pr_value)
         values.append(new_pr_value)
@@ -168,15 +165,14 @@ def put_pr_value(
     db_pr_value = session.get(PRValue, value_id)
     if not db_pr_value:
         raise HTTPException(status_code=404, detail="The resource does not exist")
-        # TODO: PR Value not found
 
     if db_pr_value.pr_id != pr_id:
+        app_logger.error(f"[put_pr_value][{current_user}] PR Value does not belong to the specified PR")
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: PR Value does not belong to the specified PR
 
     if not PRValueCreateOrUpdate.value_matches_record_key(db_pr.key, value_data.value):
+        app_logger.error(f"[put_pr_value][{current_user}] Invalid value for PR")
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: Invalid value for PR
 
     value_data = value_data.model_dump(exclude_unset=True)
 
@@ -192,7 +188,6 @@ def put_pr_value(
         ).first()
         if existing_value:
             raise HTTPException(status_code=409, detail="The resource already exists")
-            # TODO: PR Value with this date already exists
         value_data["cdate"] = parsed_date
 
     for key, value in value_data.items():
@@ -217,11 +212,9 @@ def delete_pr_value(
     db_pr_value = session.get(PRValue, value_id)
     if not db_pr_value:
         raise HTTPException(status_code=404, detail="The resource does not exist")
-        # TODO: PR Value not found
 
     if db_pr_value.pr_id != pr_id:
         raise HTTPException(status_code=400, detail="Bad request")
-        # TODO: PR Value does not belong to the specified PR
 
     session.delete(db_pr_value)
     session.commit()
