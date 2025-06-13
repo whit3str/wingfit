@@ -95,32 +95,48 @@ export function processHealthData(
     }),
   );
 
-  // Parse notes
-  const parsed_notes = notes.map((note) => ({
-    date: new Date(note.cdate).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: '2-digit',
-    }),
-    content: note.content,
-  }));
+  // Parse notes to dict with key being cdate, append duplicates
+  const parsedNotes = notes.reduce(
+    (acc, note) => {
+      if (acc[note.cdate]) acc[note.cdate] += '\n' + note.content;
+      else acc[note.cdate] = note.content;
+      return acc;
+    },
+    {} as { [date: string]: string },
+  );
 
   const strainRecoveryComboGraph = {
     labels,
     datasets: [
       {
         label: 'Notes',
-        data: parsed_notes
-          .filter((note) => labels.indexOf(note.date) > -1)
-          .map((note) => ({
-            x: note.date,
+        data: slice.map((obj, index) => {
+          if (!(obj.cdate in parsedNotes)) return { x: index, y: null };
+          return {
+            x: index,
             y: 0,
-            content: note.content,
-          })),
+            content: parsedNotes[obj.cdate],
+          };
+        }),
         pointBackgroundColor: '#909090',
         pointRadius: 10,
         showLine: false,
         yAxisID: 'yNotes',
+      },
+      {
+        label: 'HRV',
+        data: hrv.map((hrv, index) => ({
+          x: index,
+          y: hrv,
+          misc: 'ms',
+        })),
+        yAxisID: 'yHRV',
+        borderColor: '#c088bf',
+        backgroundColor: '#c088bf1A',
+        tension: 0.4,
+        fill: false,
+        pointRadius: 0,
+        borderWidth: 1,
       },
       {
         label: 'Strain',

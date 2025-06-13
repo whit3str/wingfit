@@ -181,6 +181,10 @@ export class StatisticsComponent {
         display: false,
         min: 0,
       },
+      yHRV: {
+        display: false,
+        min: 0,
+      },
       yRecovery: {
         type: 'linear',
         display: true,
@@ -289,7 +293,7 @@ export class StatisticsComponent {
         <div class="tooltip-row">
           <span class="tooltip-color" style="background:${item.element.options.borderColor}"></span>
           <span class="tooltip-label">${tooltip.body[index].lines.flat()[0].split(':')[0]}</span>
-          <span class="tooltip-value">${tooltip.body[index].lines.flat()[0].split(':')[1]}</span>
+          <span class="tooltip-value">${tooltip.body[index].lines.flat()[0].split(':')[1]}<span style="font-size: 0.75rem; color: #777;">${item.raw?.misc || ''}</span></span>
         </div>
       `;
     });
