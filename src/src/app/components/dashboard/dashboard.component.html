@@ -23,7 +23,11 @@
     </ng-template>
 
     <ng-template #end>
-      <p-button icon="pi pi-plus" (click)="createBloc()" text severity="secondary" />
+      <!-- Create Bloc on mobile -->
+      <p-button class="block md:hidden" icon="pi pi-plus" (click)="createBloc(true)" text severity="secondary" />
+      <!-- Create Bloc on screen -->
+      <p-button class="hidden md:block" icon="pi pi-plus" (click)="createBloc()" text severity="secondary" />
+
       <p-button icon="pi pi-ellipsis-h" text severity="secondary" (click)="toolbarMenu.toggle($event)" />
       <p-menu appendTo="body" #toolbarMenu [model]="toolbarMenuItems" [popup]="true" />
     </ng-template>

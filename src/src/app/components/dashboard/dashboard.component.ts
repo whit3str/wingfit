@@ -116,7 +116,7 @@ export class DashboardComponent {
     ];
   }
 
-  createBloc(): void {
+  createBloc(useSelectedDate: boolean = false): void {
     const modal: DynamicDialogRef = this.dialogService.open(
       BlocCreateModalComponent,
       {
@@ -129,6 +129,9 @@ export class DashboardComponent {
         breakpoints: {
           '960px': '60vw',
           '640px': '90vw',
+        },
+        data: {
+          date: useSelectedDate ? this.selectedDate : this.todayDate,
         },
       },
     );
@@ -443,7 +446,7 @@ export class DashboardComponent {
         '960px': '60vw',
         '640px': '90vw',
       },
-      data: { ...bloc },
+      data: { bloc: { ...bloc } },
     });
 
     modal.onClose.subscribe({
@@ -517,7 +520,7 @@ export class DashboardComponent {
               '960px': '60vw',
               '640px': '90vw',
             },
-            data: { ...bloc },
+            data: { bloc: { ...bloc } },
           });
 
           modal.onClose.subscribe({
