@@ -68,12 +68,16 @@ export class BlocCreateModalComponent {
       program: [{ value: null, disabled: true }],
     });
 
-    if (this.config.data) {
-      let edit_bloc: Bloc = this.config.data;
+    if (this.config.data.bloc) {
+      let edit_bloc: Bloc = this.config.data.bloc;
       this.blocForm.patchValue({
         ...edit_bloc,
         cdate: new Date(this.utilsService.dateStrToIso8601(edit_bloc.cdate)),
       });
+    }
+
+    if (this.config.data.date) {
+      this.blocForm.get('cdate')?.setValue(this.config.data.date);
     }
   }
 

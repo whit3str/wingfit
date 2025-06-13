@@ -43,7 +43,7 @@ export class StashComponent {
         '960px': '80vw',
         '640px': '90vw',
       },
-      data: { ...stash_bloc, id: -1 }, // id: -1 to ensure the modal does not use ID (button would display Update instead of Create)
+      data: { bloc: { ...stash_bloc, id: -1 } }, // id: -1 to ensure the modal does not use ID (button would display Update instead of Create)
     });
 
     modal.onClose.subscribe({
