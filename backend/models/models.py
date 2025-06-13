@@ -485,38 +485,18 @@ class HealthWatchData(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     cdate: date = Field(index=True)
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
-
-    spo2: int  # %
-    stand_hour: int  # applestandhour
-    stand_time: int  # applestandtime
-    flights: int  # Count
-    steps: int  # Count
-    walking_hr: int  # Avg
-    walking_speed: int  # kmh
-
-    hr_min: int  # bpm
-    hr_max: int  # bpm
-    hr_avg: int  # bpm
-    hr_resting: int  # bpm
-    hrv: int  # ms
-
-    audio_exp: int  # db
-
-    sleep_awake: int  # hours
-    sleep_asleep: int  # hours
-    sleep_start: str  # Datetime
-    sleep_end: str  # Datetime
-    sleep_total: int  # hours
-    sleep_temp: int  # appleSleepingWristTemperature, float, relative baseline
-
     recovery: int
     resting_hr: int
     hrv: int
     temperature: float
     oxy_level: float
     strain: float
-
-    sleep_score: int  # Whoop specific
+    sleep_score: int
+    sleep_duration_light: int
+    sleep_duration_deep: int
+    sleep_duration_rem: int
+    sleep_duration_awake: int
+    sleep_efficiency: int
 
 
 class HealthWatchDataRead(SQLModel):
