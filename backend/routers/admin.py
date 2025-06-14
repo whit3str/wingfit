@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, File, UploadFile, Depends, HTTPException
 from sqlmodel import select
 
 from .. import __version__
@@ -17,13 +17,16 @@ from ..models.models import (
     HealthWatchData,
     HealthWatchDataRead,
     Image,
-    LoginRegisterModel,
     Program,
     User,
     UserRead,
 )
+import json
 from ..security import ensure_superuser, hash_password, verify_mfa_code
 from ..utils.misc import b64e
+from ..utils.file import remove_image
+from ..utils.date import parse_str_or_date_to_date
+from ..utils.logging import app_logger
 from .programs import export_program
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -99,6 +102,50 @@ async def admin_reset_mfa(
     session.commit()
 
     return UserRead.serialize(target_user)
+
+
+@router.put("/import")
+async def admin_import_data(
+    session: SessionDep,
+    current_user: Annotated[str, Depends(get_current_username)],
+    file: UploadFile = File(...),
+):
+    if file.content_type != "application/json":
+        raise HTTPException(status_code=415, detail="Resource format not supported")
+
+    content = await file.read()
+    data = json.loads(content)
+    for user in data:
+        if not session.get(User, current_user):
+            app_logger.error(f"[admin_import_data] Trying to import data for unknown user {user}")
+            continue
+
+        d = data.get(user)
+        for bloc in d.get("blocs"):
+            new_bloc = Bloc(
+                content=bloc.get("content"),
+                duration=bloc.get("duration"),
+                cdate=parse_str_or_date_to_date(bloc.get("cdate")),
+                user=user,
+            )
+
+            bloc_category_name = bloc.get("category", {}).get("name")
+            category = session.exec(
+                select(BlocCategory).filter(
+                    BlocCategory.user == user, BlocCategory.name == bloc_category_name
+                )
+            ).first()
+            if not category:
+                app_logger.error(
+                    f"[admin_import_data] Trying to import bloc for unknown category {bloc_category_name}"
+                )
+                continue
+
+            new_bloc.category_id = category.id
+            session.add(new_bloc)
+
+    session.commit()
+    return {}
 
 
 @router.put("/export")
@@ -184,7 +231,7 @@ async def admin_toggle_user_active(
     return UserRead.serialize(target_user)
 
 
-@router.put("/users/{username}")
+@router.put("/users/{username}/delete")
 async def admin_delete_user(
     username: str,
     session: SessionDep,
@@ -207,18 +254,27 @@ async def admin_delete_user(
     if target_user.is_su:
         raise HTTPException(status_code=403, detail="You cannot tamper an admin account")
 
+    # Retrieve fs images
+    images = session.exec(select(Image).where(Image.user == username))
+    images = [im.filename for im in images]
+
     session.delete(target_user)
     session.commit()
+
+    # Delete the image files on fs
+    for im in images:
+        remove_image(im)
 
     return {}
 
 
 @router.post("/users", response_model=UserRead)
 async def admin_add_user(
-    req: LoginRegisterModel,
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_username)],
     code: str = Body(..., embed=True),
+    username: str = Body(..., embed=True),
+    password: str = Body(..., embed=True),
 ):
     await ensure_superuser(session, current_user)
 
@@ -230,11 +286,11 @@ async def admin_add_user(
     if not success:
         raise HTTPException(status_code=403, detail="Invalid code")
 
-    user = session.get(User, req.username)
+    user = session.get(User, username)
     if user:
         raise HTTPException(status_code=409, detail="The resource already exists")
 
-    new_user = User(username=req.username, password=hash_password(req.password))
+    new_user = User(username=username, password=hash_password(password))
     session.add(new_user)
     session.commit()
 

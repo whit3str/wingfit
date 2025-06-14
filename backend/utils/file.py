@@ -22,10 +22,8 @@ def assets_folder_path() -> Path:
 def remove_image(path: str):
     try:
         Path(assets_folder_path() / path).unlink()
-    except HTTPException(status_code=404, detail="The resource does not exist"):
-        raise Exception("Image not found")
     except OSError as exc:
-        raise Exception("Error deleting image:", exc)
+        raise Exception("Error deleting image:", exc, path)
 
 
 async def upload_f_to_tempfile(upload_file: UploadFile) -> str:

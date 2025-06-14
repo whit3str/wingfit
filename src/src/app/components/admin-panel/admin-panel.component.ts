@@ -119,11 +119,8 @@ export class AdminPanelComponent {
               });
               this.users.push(user);
             },
-            error: (_) => {
-              this.utilsService.toast('error', 'Error', _.error.detail);
-            },
           });
-        }, 100);
+        }, 250);
       },
     });
   }
@@ -163,7 +160,7 @@ export class AdminPanelComponent {
               this.apiService
                 .resetUserPassword(user.username, password, code)
                 .subscribe({
-                  next: (_) => {
+                  next: () => {
                     this.dialogService.open(SettingsViewTokenComponent, {
                       header: 'Password Reset',
                       modal: true,
@@ -178,13 +175,10 @@ export class AdminPanelComponent {
                       },
                     });
                   },
-                  error: (_) => {
-                    this.utilsService.toast('error', 'Error', _.error.detail);
-                  },
                 });
             },
           });
-        }, 100);
+        }, 250);
       },
     });
   }
@@ -224,18 +218,11 @@ export class AdminPanelComponent {
             next: (bool) => {
               if (!bool) return;
               this.apiService.toggleUserActive(user.username, code).subscribe({
-                next: (_) => (user.is_active = !user.is_active),
-                error: (_) => {
-                  this.utilsService.toast(
-                    'error',
-                    'Error updating',
-                    _.error.detail,
-                  );
-                },
+                next: () => (user.is_active = !user.is_active),
               });
             },
           });
-        }, 100);
+        }, 250);
       },
     });
   }
@@ -275,7 +262,7 @@ export class AdminPanelComponent {
               });
             },
           });
-        }, 100);
+        }, 250);
       },
     });
   }
@@ -331,7 +318,7 @@ export class AdminPanelComponent {
                     if (!bool) return;
 
                     this.apiService.deleteUser(user.username, code).subscribe({
-                      next: (_) => {
+                      next: () => {
                         this.users.splice(
                           this.users.findIndex(
                             (u) => u.username === user.username,
@@ -339,23 +326,64 @@ export class AdminPanelComponent {
                           1,
                         );
                       },
-                      error: (_) => {
-                        this.utilsService.toast(
-                          'error',
-                          'Error',
-                          _.error.detail,
-                        );
-                      },
                     });
                   },
                 });
-              }, 100);
+              }, 200);
             },
           });
-        }, 100);
+        }, 200);
       },
     });
   }
+
+  onRestoreFileSelected(e: Event): void {
+    const target = e.target as HTMLInputElement;
+    const files = target.files as FileList;
+
+    if (files[0]) {
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        try {
+          JSON.parse(reader.result?.toString() || 'invalid');
+        } catch (e: any) {
+          this.utilsService.toast(
+            'error',
+            'Import error',
+            `Could not restore data: ${e}`,
+          );
+          return;
+        }
+
+        const modal = this.dialogService.open(YesNoModalComponent, {
+          header: 'Confirm',
+          modal: true,
+          closable: true,
+          dismissableMask: true,
+          breakpoints: {
+            '640px': '90vw',
+          },
+          data: `Confirm ${files[0].name} upload ?`,
+        });
+
+        modal.onClose.subscribe({
+          next: (bool) => {
+            if (bool) {
+              const formData: FormData = new FormData();
+              formData.append('file', files[0]);
+
+              this.apiService.adminRestoreData(formData).subscribe({
+                next: () => {},
+              });
+            }
+          },
+        });
+      };
+      reader.readAsText(files[0]);
+    }
+  }
+  restoreData() {}
 
   exportData() {
     const verifyModal = this.dialogService.open(SettingsMFAVerifyComponent, {
@@ -389,15 +417,8 @@ export class AdminPanelComponent {
               document.body.removeChild(a);
               window.URL.revokeObjectURL(url);
             },
-            error: (_) => {
-              this.utilsService.toast(
-                'error',
-                'Error',
-                _.error.detail || 'Error while exporting data',
-              );
-            },
           });
-        }, 100);
+        }, 250);
       },
     });
   }

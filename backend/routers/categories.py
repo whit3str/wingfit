@@ -6,8 +6,8 @@ from sqlmodel import func, select
 from ..deps import SessionDep, get_current_username
 from ..models.models import (
     BlocCategory,
-    BlocCategoryBase,
     BlocCategoryCreate,
+    BlocCategoryUpdate,
     BlocCategoryRead,
 )
 from ..security import verify_exists_and_owns
@@ -52,7 +52,7 @@ def post_category(
 def put_category(
     session: SessionDep,
     category_id: int,
-    category: BlocCategoryBase,
+    category: BlocCategoryUpdate,
     current_user: Annotated[str, Depends(get_current_username)],
 ) -> BlocCategoryRead:
     db_category = session.get(BlocCategory, category_id)

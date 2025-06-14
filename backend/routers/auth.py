@@ -46,18 +46,18 @@ async def auth_params() -> AuthParams:
     return data
 
 
-@router.post("/login", response_model=Token)
-async def login(req: LoginRegisterModel, session: SessionDep) -> Token:
+@router.post("/login")
+async def login(req: LoginRegisterModel, session: SessionDep):
     if settings.AUTH_METHOD == "oidc":
         app_logger.error("[login] Local Authentication is disabled")
         raise HTTPException(status_code=400, detail="Bad request")
 
     db_user = session.get(User, req.username)
-    if not db_user or not db_user.is_active:
+    if not db_user or not verify_password(req.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not verify_password(req.password, db_user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not db_user.is_active:
+        raise HTTPException(status_code=401, detail="User is disabled")
 
     if db_user.mfa_enabled:
         pending_mfa_code = generate_mfa_secret()

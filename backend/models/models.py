@@ -6,7 +6,19 @@ from typing import Annotated
 
 from pydantic import BaseModel, StringConstraints
 from pydantic_settings import BaseSettings
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import MetaData
+
+
+convention = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
+SQLModel.metadata = MetaData(naming_convention=convention)
 
 
 class Settings(BaseSettings):
@@ -125,7 +137,7 @@ class StashBase(SQLModel):
 
 class Stash(StashBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: lambda: datetime.now(UTC).date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
 
 
@@ -160,6 +172,12 @@ class BlocCategoryCreate(BlocCategoryBase):
     name: str
     color: str
     weight: int | None
+
+
+class BlocCategoryUpdate(BlocCategoryBase):
+    name: str | None = None
+    color: str | None = None
+    weight: int | None = None
 
 
 class BlocCategoryRead(BlocCategoryBase):
@@ -202,7 +220,7 @@ class BlocBase(SQLModel):
 
 class Bloc(BlocBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: lambda: datetime.now(UTC).date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
     result_id: int | None = Field(default=None, foreign_key="blocresult.id")
     result: BlocResult | None = Relationship(back_populates="bloc")
@@ -214,7 +232,7 @@ class Bloc(BlocBase, table=True):
 class BlocCreate(BlocBase):
     category: BlocCategoryRead | None = None
     category_id: int | None = None
-    cdate: str | date = Field(default_factory=lambda: lambda: datetime.now(UTC).date())
+    cdate: str | date = Field(default_factory=lambda: datetime.now(UTC).date())
 
 
 class BlocUpdate(BlocBase):
@@ -222,7 +240,7 @@ class BlocUpdate(BlocBase):
     category: BlocCategoryRead | None = None
     category_id: int | None = None
     result_id: int | None = None
-    cdate: str | date = Field(default_factory=lambda: lambda: datetime.now(UTC).date())
+    cdate: str | date = Field(default_factory=lambda: datetime.now(UTC).date())
 
 
 class BlocRead(BlocBase):
@@ -284,7 +302,7 @@ class PRValueBase(SQLModel):
 
 
 class PRValueCreateOrUpdate(PRValueBase):
-    cdate: str | date = Field(default_factory=lambda: lambda: datetime.now(UTC).date())
+    cdate: str | date = Field(default_factory=lambda: datetime.now(UTC).date())
 
     @classmethod
     def value_matches_record_key(cls, key: ResultKeyEnum, value: str) -> bool:
@@ -304,9 +322,9 @@ class PRValueCreateOrUpdate(PRValueBase):
 
 class PRValue(PRValueBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: lambda: datetime.now(UTC).date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
 
-    pr_id: int = Field(foreign_key="pr.id")
+    pr_id: int = Field(foreign_key="pr.id", ondelete="CASCADE")
     pr: PR | None = Relationship(back_populates="values")
 
 
@@ -330,7 +348,7 @@ class ProgramBase(SQLModel):
 
 class Program(ProgramBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: lambda: datetime.now(UTC).date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
     image_id: int | None = Field(default=None, foreign_key="image.id", ondelete="CASCADE")
     image: Image | None = Relationship(back_populates="programs")
@@ -392,7 +410,7 @@ class ProgramStepBase(SQLModel):
 
 class ProgramStep(ProgramStepBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    cdate: date = Field(default_factory=lambda: lambda: datetime.now(UTC).date())
+    cdate: date = Field(default_factory=lambda: datetime.now(UTC).date())
     user: str = Field(foreign_key="user.username", ondelete="CASCADE")
     program_id: int = Field(foreign_key="program.id", ondelete="CASCADE")
     program: Program | None = Relationship(back_populates="steps")
@@ -443,7 +461,7 @@ class ProgramStepBlocBase(SQLModel):
 class ProgramStepBloc(ProgramStepBlocBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     next_in: int
-    user: str = Field(foreign_key="user.username")
+    user: str = Field(foreign_key="user.username", ondelete="CASCADE")
 
     category_id: int = Field(foreign_key="bloccategory.id", ondelete="CASCADE")
     category: BlocCategory | None = Relationship(back_populates="programblocs")
@@ -497,6 +515,38 @@ class HealthWatchData(SQLModel, table=True):
     sleep_duration_rem: int
     sleep_duration_awake: int
     sleep_efficiency: int
+
+    # spo2: int  # %
+    # stand_hour: int  # applestandhour
+    # stand_time: int  # applestandtime
+    # flights: int  # Count
+    # steps: int  # Count
+    # walking_hr: int  # Avg
+    # walking_speed: int  # kmh
+
+    # hr_min: int  # bpm
+    # hr_max: int  # bpm
+    # hr_avg: int  # bpm
+    # hr_resting: int  # bpm
+    # hrv: int  # ms
+
+    # audio_exp: int  # db
+
+    # sleep_awake: int  # hours
+    # sleep_asleep: int  # hours
+    # sleep_start: str  # Datetime
+    # sleep_end: str  # Datetime
+    # sleep_total: int  # hours
+    # sleep_temp: int  # appleSleepingWristTemperature, float, relative baseline
+
+    # recovery: int
+    # resting_hr: int
+    # hrv: int
+    # temperature: float
+    # oxy_level: float
+    # strain: float
+
+    # sleep_score: int  # Whoop specific
 
 
 class HealthWatchDataRead(SQLModel):

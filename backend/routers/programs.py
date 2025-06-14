@@ -219,7 +219,9 @@ async def put_program(
                 remove_image(old_image.filename)
                 session.delete(old_image)
             except Exception as exc:
-                app_logger.error(f"[put_program][{current_user}] Exception during previous image deletion: {exc}")
+                app_logger.error(
+                    f"[put_program][{current_user}] Exception during previous image deletion: {exc}"
+                )
 
     session.refresh(db_program)
 

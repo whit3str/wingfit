@@ -1,5 +1,4 @@
 import secrets
-from logging import INFO
 
 from pydantic_settings import BaseSettings
 
@@ -9,7 +8,6 @@ class Settings(BaseSettings):
     FRONTEND_FOLDER: str = "frontend"
     SQLITE_FILE: str = "storage/wingfit.sqlite"
     LOG_FILE: str = "storage/wingfit.log"
-    LOG_LEVEL: int = INFO
 
     OPENAI_API_KEY: str = ""
     OPEN_AI_HOST: str = ""

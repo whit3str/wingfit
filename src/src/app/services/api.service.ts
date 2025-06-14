@@ -429,10 +429,23 @@ export class ApiService {
     });
   }
 
+  adminRestoreData(data: FormData): Observable<Program> {
+    return this.httpClient.put<Program>(
+      this.apiBaseUrl + '/admin/import',
+      data,
+      {
+        headers: { enctype: 'multipart/form-data' },
+      },
+    );
+  }
+
   deleteUser(username: string, code: string): Observable<{}> {
-    return this.httpClient.put(this.apiBaseUrl + `/admin/users/${username}`, {
-      code: code,
-    });
+    return this.httpClient.put(
+      this.apiBaseUrl + `/admin/users/${username}/delete`,
+      {
+        code: code,
+      },
+    );
   }
 
   adminResetMFA(username: string, code: string): Observable<User> {
