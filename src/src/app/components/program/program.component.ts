@@ -168,6 +168,27 @@ export class ProgramComponent {
     ];
   }
 
+  exportProgram() {
+    this.apiService.exportProgram(this.program!.id).subscribe({
+      next: (data) => {
+        const blob = new Blob([JSON.stringify(data)], {
+          type: 'application/json',
+        });
+        const url = window.URL.createObjectURL(blob);
+        const today = new Date().toISOString().split('T')[0];
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `wingfit_program_${this.program!.name}.json`;
+        document.body.appendChild(a);
+        a.click();
+
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+    });
+  }
+
   blocClicked(bloc: ProgramBloc) {
     const modal = this.dialogService.open(ToDateModalComponent, {
       header: 'Copy to',

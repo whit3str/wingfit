@@ -107,7 +107,7 @@
 
       <div class="pt-4 mx-auto max-w-80 flex justify-between">
         <p-button icon="pi pi-database" text severity="info" (click)="exportData()" label="Full Export" />
-        <p-button icon="pi pi-database" text severity="help" disabled label="Restore data" />
+        <p-button icon="pi pi-database" text severity="help" (click)="fileUpload.click()" label="Restore data" />
         <input type="file" class="file-input" style="display: none" (change)="onRestoreFileSelected($event)"
           #fileUpload />
       </div>

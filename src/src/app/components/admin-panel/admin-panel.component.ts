@@ -298,7 +298,6 @@ export class AdminPanelComponent {
               if (!bool) return;
 
               setTimeout(() => {
-                // Handle Angular cd
                 const confirmmodal = this.dialogService.open(
                   YesNoModalComponent,
                   {
@@ -340,50 +339,72 @@ export class AdminPanelComponent {
   onRestoreFileSelected(e: Event): void {
     const target = e.target as HTMLInputElement;
     const files = target.files as FileList;
-
     if (files[0]) {
-      const reader = new FileReader();
+      const verifyModal = this.dialogService.open(SettingsMFAVerifyComponent, {
+        header: 'Verify MFA',
+        modal: true,
+        closable: true,
+        breakpoints: {
+          '640px': '90vw',
+        },
+      });
 
-      reader.onloadend = () => {
-        try {
-          JSON.parse(reader.result?.toString() || 'invalid');
-        } catch (e: any) {
-          this.utilsService.toast(
-            'error',
-            'Import error',
-            `Could not restore data: ${e}`,
-          );
-          return;
-        }
+      verifyModal.onClose.subscribe({
+        next: (code: string) => {
+          if (!code) return;
 
-        const modal = this.dialogService.open(YesNoModalComponent, {
-          header: 'Confirm',
-          modal: true,
-          closable: true,
-          dismissableMask: true,
-          breakpoints: {
-            '640px': '90vw',
-          },
-          data: `Confirm ${files[0].name} upload ?`,
-        });
+          const reader = new FileReader();
 
-        modal.onClose.subscribe({
-          next: (bool) => {
-            if (bool) {
-              const formData: FormData = new FormData();
-              formData.append('file', files[0]);
-
-              this.apiService.adminRestoreData(formData).subscribe({
-                next: () => {},
-              });
+          reader.onloadend = () => {
+            try {
+              JSON.parse(reader.result?.toString() || 'invalid');
+            } catch (e: any) {
+              this.utilsService.toast(
+                'error',
+                'Import error',
+                `Could not restore data: ${e}`,
+              );
+              return;
             }
-          },
-        });
-      };
-      reader.readAsText(files[0]);
+
+            setTimeout(() => {
+              const modal = this.dialogService.open(YesNoModalComponent, {
+                header: 'Confirm',
+                modal: true,
+                closable: true,
+                dismissableMask: true,
+                breakpoints: {
+                  '640px': '90vw',
+                },
+                data: `Confirm ${files[0].name} data import ? There will be no checks, duplicates could be created`,
+              });
+
+              modal.onClose.subscribe({
+                next: (bool) => {
+                  if (bool) {
+                    const formData: FormData = new FormData();
+                    formData.append('file', files[0]);
+                    formData.append('code', code);
+
+                    this.apiService.adminRestoreData(formData).subscribe({
+                      next: () => {
+                        this.utilsService.toast(
+                          'success',
+                          'Success',
+                          'Import was successful',
+                        );
+                      },
+                    });
+                  }
+                },
+              });
+            }, 500);
+          };
+          reader.readAsText(files[0]);
+        },
+      });
     }
   }
-  restoreData() {}
 
   exportData() {
     const verifyModal = this.dialogService.open(SettingsMFAVerifyComponent, {

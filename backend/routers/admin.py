@@ -1,14 +1,13 @@
 from datetime import datetime
-from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Body, File, UploadFile, Depends, HTTPException
+from fastapi import APIRouter, Body, File, Form, UploadFile, Depends, HTTPException
 from sqlmodel import select
 
 from .. import __version__
-from ..config import settings
 from ..db.core import init_user_data
 from ..deps import SessionDep, get_current_username
+from sqlalchemy.orm import selectinload
 from ..models.models import (
     Bloc,
     BlocCategory,
@@ -17,17 +16,21 @@ from ..models.models import (
     HealthWatchData,
     HealthWatchDataRead,
     Image,
+    ResultKeyEnum,
+    BlocResult,
     Program,
+    PR,
+    PRRead,
+    PRValue,
     User,
     UserRead,
 )
 import json
 from ..security import ensure_superuser, hash_password, verify_mfa_code
-from ..utils.misc import b64e
 from ..utils.file import remove_image
 from ..utils.date import parse_str_or_date_to_date
 from ..utils.logging import app_logger
-from .programs import export_program
+from .programs import export_program, import_program
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -109,7 +112,18 @@ async def admin_import_data(
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_username)],
     file: UploadFile = File(...),
+    code: str = Form(...),
 ):
+    await ensure_superuser(session, current_user)
+
+    db_user = session.get(User, current_user)
+    if not db_user.mfa_enabled:
+        raise HTTPException(status_code=400, detail="Enable MFA to perform admin actions")
+
+    success = verify_mfa_code(db_user.mfa_secret, code)
+    if not success:
+        raise HTTPException(status_code=403, detail="Invalid code")
+
     if file.content_type != "application/json":
         raise HTTPException(status_code=415, detail="Resource format not supported")
 
@@ -121,14 +135,25 @@ async def admin_import_data(
             continue
 
         d = data.get(user)
-        for bloc in d.get("blocs"):
-            new_bloc = Bloc(
-                content=bloc.get("content"),
-                duration=bloc.get("duration"),
-                cdate=parse_str_or_date_to_date(bloc.get("cdate")),
+        for category in d.get("categories", []):
+            category_exists = session.exec(
+                select(BlocCategory).filter(
+                    BlocCategory.user == user, BlocCategory.name == category.get("name")
+                )
+            ).first()
+            if category_exists:
+                continue
+
+            new_category = BlocCategory(
+                name=category.get("name"),
+                color=category.get("color"),
+                weight=category.get("weight"),
                 user=user,
             )
+            session.add(new_category)
+        session.flush()
 
+        for bloc in d.get("blocs", []):
             bloc_category_name = bloc.get("category", {}).get("name")
             category = session.exec(
                 select(BlocCategory).filter(
@@ -141,8 +166,41 @@ async def admin_import_data(
                 )
                 continue
 
+            new_bloc = Bloc(
+                content=bloc.get("content"),
+                duration=bloc.get("duration"),
+                cdate=parse_str_or_date_to_date(bloc.get("cdate")),
+                user=user,
+            )
             new_bloc.category_id = category.id
+
+            if bloc.get("result"):
+                b = bloc.get("result")
+                new_result = BlocResult(key=b.get("key"), value=b.get("value"), comment=b.get("comment"))
+                session.add(new_result)
+                new_bloc.result = new_result
+
             session.add(new_bloc)
+
+        for program in d.get("programs", []):
+            await import_program(session, user, program)
+
+        for pr in d.get("pr", []):
+            if pr.get("key") not in {item.value for item in ResultKeyEnum}:
+                app_logger.error(f"[post_pr][{current_user}] Invalid key provided")
+                raise HTTPException(status_code=400, detail="Bad request")
+
+            new_pr = PR(name=pr.get("name"), key=pr.get("key"), user=user)
+
+            if pr.get("values"):
+                pr_values = []
+                for value in pr.get("values"):
+                    parsed_date = parse_str_or_date_to_date(value.get("cdate"))
+                    pr_values.append(PRValue(value=value.get("value"), cdate=parsed_date, pr=new_pr))
+
+                new_pr.values = pr_values
+
+            session.add(new_pr)
 
     session.commit()
     return {}
@@ -175,12 +233,17 @@ async def admin_export_data(
                 BlocCategoryRead.serialize(c)
                 for c in session.exec(select(BlocCategory).filter(BlocCategory.user == username))
             ],
+            "pr": [
+                PRRead.serialize(pr)
+                for pr in session.exec(
+                    select(PR).where(PR.user == username).options(selectinload(PR.values))
+                )
+            ],
             "blocs": [
                 BlocRead.serialize(bloc) for bloc in session.exec(select(Bloc).filter(Bloc.user == username))
             ],
-            "images": {},
             "programs": [
-                export_program(program.id, session, username)
+                await export_program(program.id, session, username)
                 for program in session.exec(select(Program).filter(Program.user == username))
             ],
         }
@@ -191,11 +254,6 @@ async def admin_export_data(
             .order_by(HealthWatchData.cdate.desc())
         )
         data[username]["hw_data"] = [HealthWatchDataRead.serialize(r) for r in hw_data]
-
-        images = session.exec(select(Image).where(Image.user == username))
-        for im in images:
-            with open(Path(settings.ASSETS_FOLDER) / im.filename, "rb") as f:
-                data[username]["images"][im.id] = b64e(f.read())
 
     return data
 

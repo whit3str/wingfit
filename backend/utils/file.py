@@ -26,6 +26,13 @@ def remove_image(path: str):
         raise Exception("Error deleting image:", exc, path)
 
 
+async def read_image(filename: str) -> bytes:
+    file_path = Path(settings.ASSETS_FOLDER) / filename
+    # TODO: Chunk yield
+    async with aiofiles.open(file_path, "rb") as f:
+        return await f.read()
+
+
 async def upload_f_to_tempfile(upload_file: UploadFile) -> str:
     try:
         async with aiofiles.tempfile.NamedTemporaryFile("wb", delete=False) as tmpfile:

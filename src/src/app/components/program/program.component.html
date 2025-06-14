@@ -9,6 +9,8 @@
         @if (editMode) {
         <p-button icon="pi pi-times" (click)="disableEditMode()" label="Exit edit" text severity="danger" />
         } @else {
+        <p-button icon="pi pi-download" (click)="exportProgram()" label="Export" pTooltip="Export Program"
+          tooltipPosition="bottom" severity="secondary" />
         <p-button icon="pi pi-pencil" (click)="enableEditMode()" label="Edit mode" severity="secondary" />
         }
         <p-button icon="pi pi-ellipsis-h" label="More" severity="secondary" (click)="toolbarMenu.toggle($event)" />

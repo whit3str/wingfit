@@ -26,9 +26,9 @@ from ..models.models import (
     ProgramUpdate,
 )
 from ..security import verify_exists_and_owns
-from ..utils.file import remove_image, save_image
+from ..utils.file import remove_image, save_image, read_image
 from ..utils.logging import app_logger
-from ..utils.misc import b64img_decode
+from ..utils.misc import b64img_decode, b64e
 
 router = APIRouter(prefix="/api/programs", tags=["programs"])
 
@@ -45,30 +45,32 @@ async def upload_program(
     try:
         content = await file.read()
         data = json.loads(content)
-        program_data = ProgramCreate(**data)
-    except json.JSONDecodeError as exc:
-        app_logger.error(f"[upload_program][{current_user}] Invalid JSON format: {exc}")
-        raise HTTPException(status_code=400, detail="Bad request")
+        new_program = await import_program(session, current_user, data)
+    except Exception as exc:
+        app_logger.error(f"[upload_program][{current_user}] An error occured: {exc}")
+        raise HTTPException(status_code=400, detail="400")
+
+    session.commit()
+    return ProgramRead.serialize(new_program)
+
+
+async def import_program(session, current_user, data) -> Program:
+    try:
+        ProgramCreate(**data)
     except ValidationError:
         raise HTTPException(status_code=422, detail="Resource cannot be processed")
 
-    existing_program = session.exec(
-        select(Program).where(Program.user == current_user, Program.name == program_data.get("name"))
-    ).first()
-    if existing_program:
-        raise HTTPException(status_code=409, detail="The resource already exists")
-
     new_program = Program(
-        name=program_data.get("name"),
-        description=program_data.get("description"),
+        name=data.get("name"),
+        description=data.get("description"),
         user=current_user,
     )
 
-    if program_data.image:
-        image_bytes = b64img_decode(program_data.get("image"))
+    if data.get("image"):
+        image_bytes = b64img_decode(data.get("image"))
         filename = save_image(image_bytes, 400)
         if not filename:
-            app_logger.error(f"[upload_program][{current_user}] Image saving error, check logs")
+            app_logger.error(f"[import_program][{current_user}] Image saving error, check logs")
             raise HTTPException(status_code=400, detail="Bad request")
 
         image = Image(filename=filename, user=current_user)
@@ -80,12 +82,7 @@ async def upload_program(
     session.add(new_program)
     session.flush()
 
-    blocs_category_id_mapping = {
-        bloc.name: bloc.id
-        for bloc in session.exec(select(BlocCategory).filter(BlocCategory.user == current_user))
-    }  # Prepare before the loops the mapping for {str: id}[]
-
-    for step in program_data.get("steps", []):
+    for step in data.get("steps", []):
         new_step = ProgramStep(
             name=step.get("name", None),
             repeat=step.get("repeat", 0),
@@ -96,27 +93,30 @@ async def upload_program(
         session.flush()
 
         for bloc in step.get("blocs", []):
-            category_id = blocs_category_id_mapping.get(bloc.get("type"))
-            if not category_id:
-                app_logger.error(f"[upload_program][{current_user}] Category missing in Step Bloc")
-                raise HTTPException(status_code=400, detail="Bad request")
+            bloc_category_name = bloc.get("category", {}).get("name")
+            category = session.exec(
+                select(BlocCategory).filter(
+                    BlocCategory.user == current_user, BlocCategory.name == bloc_category_name
+                )
+            ).first()
+            if not category:
+                raise HTTPException(status_code=404, detail="Unknown category in Program Blocs")
 
             new_bloc = ProgramStepBloc(
                 content=bloc.get("content"),
                 duration=bloc.get("duration"),
                 next_in=bloc.get("next_in", 0),
-                category_id=category_id,
+                category_id=category.id,
                 program_step_id=new_step.id,
                 user=current_user,
             )
             session.add(new_bloc)
 
-    session.commit()
-    return ProgramRead.serialize(new_program)
+    return new_program
 
 
 @router.get("/{program_id}/export")
-def export_program(
+async def export_program(
     program_id: int,
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_username)],
@@ -131,6 +131,8 @@ def export_program(
 
     data = db_program.dict()  # Use dict() instead of serialize to get a dict
     data["steps"] = [ProgramStepWithBlocsRead.serialize(step) for step in db_program.steps]
+    im = session.exec(select(Image).where(Image.user == current_user, Image.id == data["image_id"])).first()
+    data["image"] = b64e(await read_image(im.filename))
     return data
 
 

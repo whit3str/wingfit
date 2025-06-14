@@ -307,6 +307,12 @@ export class ApiService {
       );
   }
 
+  exportProgram(p_id: number): Observable<any> {
+    return this.httpClient.get<any>(
+      this.apiBaseUrl + `/programs/${p_id}/export`,
+    );
+  }
+
   uploadProgram(data: FormData): Observable<Program> {
     return this.httpClient
       .post<Program>(this.apiBaseUrl + '/programs/upload', data, {

@@ -1,5 +1,4 @@
 from datetime import datetime
-from pathlib import Path
 from typing import Annotated
 import pyotp
 
@@ -7,9 +6,9 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlmodel import select
 
 from .. import __version__
-from ..config import settings
 from ..security import generate_mfa_secret, verify_mfa_code
 from ..deps import SessionDep, get_current_username
+from sqlalchemy.orm import selectinload
 from ..models.models import (
     Bloc,
     BlocCategory,
@@ -17,12 +16,13 @@ from ..models.models import (
     BlocRead,
     HealthWatchData,
     HealthWatchDataRead,
-    Image,
     Program,
+    PR,
+    PRRead,
     User,
     UserRead,
 )
-from ..utils.misc import b64e, check_update, generate_api_token
+from ..utils.misc import check_update, generate_api_token
 from .programs import export_program
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -37,7 +37,7 @@ async def get_user_settings(
 
 
 @router.put("/export")
-def export_user_data(
+async def export_user_data(
     session: SessionDep,
     current_user: Annotated[str, Depends(get_current_username)],
     code: str = Body(..., embed=True),
@@ -56,12 +56,17 @@ def export_user_data(
             BlocCategoryRead.serialize(c)
             for c in session.exec(select(BlocCategory).filter(BlocCategory.user == current_user))
         ],
+        "pr": [
+            PRRead.serialize(pr)
+            for pr in session.exec(
+                select(PR).where(PR.user == current_user).options(selectinload(PR.values))
+            )
+        ],
         "blocs": [
             BlocRead.serialize(bloc) for bloc in session.exec(select(Bloc).filter(Bloc.user == current_user))
         ],
-        "images": {},
         "programs": [
-            export_program(program.id, session, current_user)
+            await export_program(program.id, session, current_user)
             for program in session.exec(select(Program).filter(Program.user == current_user))
         ],
     }
@@ -72,11 +77,6 @@ def export_user_data(
         .order_by(HealthWatchData.cdate.desc())
     )
     data["hw_data"] = [HealthWatchDataRead.serialize(r) for r in hw_data]
-
-    images = session.exec(select(Image).where(Image.user == current_user))
-    for im in images:
-        with open(Path(settings.ASSETS_FOLDER) / im.filename, "rb") as f:
-            data["images"][im.id] = b64e(f.read())
 
     return data
 
