@@ -21,29 +21,18 @@ COPY app/ ./app/
 # Stage 3: Production
 FROM python:3.11-slim AS production
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    nginx \
-    supervisor \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy backend dependencies and application
 WORKDIR /app
 COPY --from=backend-builder /app ./
 COPY --from=backend-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
-# Copy frontend build
-COPY --from=frontend-builder /app/frontend/dist/wingfit/browser /var/www/html
-
-# Configure Nginx
-COPY nginx.conf /etc/nginx/sites-available/default
-
-# Configure Supervisor
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Copy frontend build to be served by FastAPI
+COPY --from=frontend-builder /app/frontend/dist/wingfit/browser ./static
 
 # Create data directory for SQLite database
 RUN mkdir -p /app/data
 
-EXPOSE 8080
+EXPOSE 8000
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Run FastAPI directly (Nginx reverse proxy will handle external access)
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
